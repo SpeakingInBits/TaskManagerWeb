@@ -288,6 +288,44 @@
                         </form>
                     </div>
                 </div>
+
+                <!-- Project Detail Modal -->
+                <div class="modal" id="projectDetailModal">
+                    <div class="modal-content" style="max-width: 800px;">
+                        <div class="modal-header">
+                            <h3 id="projectDetailTitle">Project Details</h3>
+                            <button class="close-btn">&times;</button>
+                        </div>
+                        <div class="project-detail-content">
+                            <p id="projectDetailDescription" style="margin-bottom: 1rem; color: #666;"></p>
+                            
+                            <div class="project-detail-stats" style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                                <div class="summary-card" style="flex: 1;">
+                                    <span class="label">Total Tasks</span>
+                                    <span class="value" id="projectDetailTotalTasks">0</span>
+                                </div>
+                                <div class="summary-card" style="flex: 1;">
+                                    <span class="label">Completed</span>
+                                    <span class="value" id="projectDetailCompletedTasks">0</span>
+                                </div>
+                                <div class="summary-card" style="flex: 1;">
+                                    <span class="label">Progress</span>
+                                    <span class="value" id="projectDetailProgress">0%</span>
+                                </div>
+                            </div>
+
+                            <h4 style="margin-bottom: 0.5rem;">Related Tasks</h4>
+                            <div class="task-list" id="projectDetailTaskList">
+                                <p class="empty-state">No tasks in this project yet.</p>
+                            </div>
+
+                            <div class="form-actions" style="margin-top: 1.5rem;">
+                                <button type="button" class="btn btn-primary" id="editProjectFromDetailBtn">Edit Project</button>
+                                <button type="button" class="btn btn-secondary" id="closeProjectDetailBtn">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Habits Tab -->

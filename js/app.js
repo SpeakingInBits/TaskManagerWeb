@@ -68,6 +68,8 @@ class TaskManager {
         document.getElementById('projectForm').addEventListener('submit', (e) => this.saveProject(e));
         document.getElementById('cancelProjectBtn').addEventListener('click', () => this.closeProjectModal());
         document.getElementById('deleteProjectBtn').addEventListener('click', () => this.deleteProject());
+        document.getElementById('closeProjectDetailBtn').addEventListener('click', () => this.closeProjectDetailModal());
+        document.getElementById('editProjectFromDetailBtn').addEventListener('click', () => this.editProjectFromDetail());
 
         // Habits section
         document.getElementById('addHabitBtn').addEventListener('click', () => this.openHabitModal());
@@ -442,6 +444,11 @@ class TaskManager {
     closeTaskModal() {
         document.getElementById('taskModal').classList.remove('active');
         this.currentEditingTaskId = null;
+        
+        // If project detail modal is open, refresh it
+        if (document.getElementById('projectDetailModal').classList.contains('active')) {
+            this.openProjectDetailModal(this.currentEditingProjectId);
+        }
     }
 
     updateRepeatTypeUI(repeatType) {
@@ -521,6 +528,7 @@ class TaskManager {
 
         this.closeTaskModal();
         this.renderTasks();
+        this.renderProjects();
     }
 
     deleteTask() {
@@ -529,6 +537,7 @@ class TaskManager {
                 storage.deleteTask(this.currentEditingTaskId);
                 this.closeTaskModal();
                 this.renderTasks();
+                this.renderProjects();
             }
         }
     }
@@ -545,6 +554,7 @@ class TaskManager {
             storage.updateTask(taskId, task);
             this.renderTasks();
             this.renderDashboard();
+            this.renderProjects();
         }
     }
 
@@ -564,9 +574,7 @@ class TaskManager {
 
         document.querySelectorAll('.project-card').forEach(card => {
             card.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('project-edit-btn')) {
-                    this.openProjectModal(card.dataset.projectId);
-                }
+                this.openProjectDetailModal(card.dataset.projectId);
             });
         });
     }
@@ -656,6 +664,85 @@ class TaskManager {
                 this.renderProjects();
             }
         }
+    }
+
+    openProjectDetailModal(projectId) {
+        const project = storage.getProjects().find(p => p.id === projectId);
+        if (!project) return;
+
+        this.currentEditingProjectId = projectId;
+        const modal = document.getElementById('projectDetailModal');
+        
+        // Set project info
+        document.getElementById('projectDetailTitle').textContent = project.name;
+        document.getElementById('projectDetailDescription').textContent = project.description || 'No description';
+        
+        // Get related tasks
+        const tasks = storage.getTasks().filter(t => t.projectId === projectId);
+        const completed = tasks.filter(t => t.completed).length;
+        const percentage = tasks.length === 0 ? 0 : Math.round((completed / tasks.length) * 100);
+        
+        // Update stats
+        document.getElementById('projectDetailTotalTasks').textContent = tasks.length;
+        document.getElementById('projectDetailCompletedTasks').textContent = completed;
+        document.getElementById('projectDetailProgress').textContent = percentage + '%';
+        
+        // Render task list
+        this.renderProjectDetailTasks(tasks);
+        
+        modal.classList.add('active');
+    }
+
+    closeProjectDetailModal() {
+        document.getElementById('projectDetailModal').classList.remove('active');
+        this.currentEditingProjectId = null;
+    }
+
+    editProjectFromDetail() {
+        this.closeProjectDetailModal();
+        this.openProjectModal(this.currentEditingProjectId);
+    }
+
+    renderProjectDetailTasks(tasks) {
+        const container = document.getElementById('projectDetailTaskList');
+        
+        if (tasks.length === 0) {
+            container.innerHTML = '<p class="empty-state">No tasks in this project yet.</p>';
+            return;
+        }
+
+        container.innerHTML = tasks.map(task => `
+            <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
+                <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}>
+                <div class="task-info">
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-meta">
+                        ${task.dueDate ? `<span>📅 ${task.dueDate}</span>` : ''}
+                        ${task.priority ? `<span class="priority-${task.priority}">⚡ ${task.priority}</span>` : ''}
+                        ${task.category ? `<span>📂 ${task.category}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Add click handlers for tasks
+        document.querySelectorAll('#projectDetailTaskList .task-item').forEach(item => {
+            const checkbox = item.querySelector('.task-checkbox');
+            checkbox.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleTask(item.dataset.taskId);
+                // Refresh the detail view
+                this.openProjectDetailModal(this.currentEditingProjectId);
+            });
+            
+            item.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('task-checkbox')) {
+                    this.closeProjectDetailModal();
+                    this.switchTab('tasks');
+                    this.openTaskModal(item.dataset.taskId);
+                }
+            });
+        });
     }
 
     // ========================
