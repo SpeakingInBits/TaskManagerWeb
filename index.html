@@ -385,6 +385,7 @@
                         <div class="finance-buttons">
                             <button class="btn btn-success" id="addExpenseBtn">+ Add Expense</button>
                             <button class="btn btn-success" id="addRevenueBtn">+ Add Revenue</button>
+                            <button class="btn btn-primary" id="addChargeBtn">+ Add Other Charge</button>
                         </div>
                     </div>
 
@@ -404,10 +405,21 @@
                         </div>
                     </div>
 
-                    <!-- Tabs for Expenses, Revenue -->
+                    <!-- Date Range Filter -->
+                    <div class="filters" style="margin-bottom: 1rem;">
+                        <label style="margin-right: 0.5rem;">From:</label>
+                        <input type="date" id="financeStartDate" class="filter-input" style="width: auto;">
+                        <label style="margin-left: 1rem; margin-right: 0.5rem;">To:</label>
+                        <input type="date" id="financeEndDate" class="filter-input" style="width: auto;">
+                        <button class="btn btn-secondary" id="filterFinancesBtn" style="margin-left: 0.5rem;">Apply</button>
+                        <button class="btn btn-secondary" id="resetFinanceFilterBtn" style="margin-left: 0.5rem;">This Month</button>
+                    </div>
+
+                    <!-- Tabs for Expenses, Revenue, Other Charges -->
                     <div class="finance-tabs">
                         <button class="finance-tab active" data-finance-tab="expenses">Expenses</button>
                         <button class="finance-tab" data-finance-tab="revenue">Revenue</button>
+                        <button class="finance-tab" data-finance-tab="charges">Other Charges</button>
                     </div>
 
                     <!-- Expenses List -->
@@ -421,6 +433,13 @@
                     <div class="finance-content" id="revenue-content">
                         <div class="finance-list" id="revenueList">
                             <p class="empty-state">No revenue. Add one to track income!</p>
+                        </div>
+                    </div>
+
+                    <!-- Other Charges List -->
+                    <div class="finance-content" id="charges-content">
+                        <div class="finance-list" id="chargesList">
+                            <p class="empty-state">No charges yet. Add one to track other expenses!</p>
                         </div>
                     </div>
                 </div>

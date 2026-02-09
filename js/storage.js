@@ -29,6 +29,7 @@ class StorageManager {
             dailyHabitLogs: [],
             expenses: [],
             revenue: [],
+            charges: [],
             categories: {
                 tasks: ['Work', 'Personal', 'Home', 'Shopping'],
                 habits: ['Health', 'Fitness', 'Learning', 'Productivity'],
@@ -256,6 +257,46 @@ class StorageManager {
     getRevenue() {
         const data = this.getData();
         return data.revenue || [];
+    }
+
+    // Other Charges Management
+    addCharge(charge) {
+        const data = this.getData();
+        if (!data.charges) {
+            data.charges = [];
+        }
+        charge.id = this.generateId();
+        charge.createdDate = new Date().toISOString();
+        data.charges.push(charge);
+        this.saveData(data);
+        return charge;
+    }
+
+    updateCharge(chargeId, updates) {
+        const data = this.getData();
+        if (!data.charges) {
+            data.charges = [];
+        }
+        const charge = data.charges.find(c => c.id === chargeId);
+        if (charge) {
+            Object.assign(charge, updates);
+            this.saveData(data);
+        }
+        return charge;
+    }
+
+    deleteCharge(chargeId) {
+        const data = this.getData();
+        if (!data.charges) {
+            data.charges = [];
+        }
+        data.charges = data.charges.filter(c => c.id !== chargeId);
+        this.saveData(data);
+    }
+
+    getCharges() {
+        const data = this.getData();
+        return data.charges || [];
     }
 
     // Points Management

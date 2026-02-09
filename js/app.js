@@ -36,6 +36,7 @@ class TaskManager {
 
     init() {
         this.setupEventListeners();
+        this.initializeFinanceDateFilter();
         this.render();
         this.processRecurringTasks();
     }
@@ -82,6 +83,7 @@ class TaskManager {
         // Finances section
         document.getElementById('addExpenseBtn').addEventListener('click', () => this.openFinanceModal('expense'));
         document.getElementById('addRevenueBtn').addEventListener('click', () => this.openFinanceModal('revenue'));
+        document.getElementById('addChargeBtn').addEventListener('click', () => this.openFinanceModal('charge'));
         document.getElementById('financeForm').addEventListener('submit', (e) => this.saveFinance(e));
         document.getElementById('cancelFinanceBtn').addEventListener('click', () => this.closeFinanceModal());
         document.getElementById('deleteFinanceBtn').addEventListener('click', () => this.deleteFinance());
@@ -92,6 +94,10 @@ class TaskManager {
         document.querySelectorAll('.finance-tab').forEach(tab => {
             tab.addEventListener('click', (e) => this.switchFinanceTab(e.target.dataset.financeTab));
         });
+
+        // Finance filters
+        document.getElementById('filterFinancesBtn').addEventListener('click', () => this.renderFinances());
+        document.getElementById('resetFinanceFilterBtn').addEventListener('click', () => this.resetFinanceFilter());
 
         // Modal close buttons
         document.querySelectorAll('.close-btn').forEach(btn => {
@@ -938,33 +944,78 @@ class TaskManager {
     // ========================
     // Finances Management
     // ========================
+    initializeFinanceDateFilter() {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        document.getElementById('financeStartDate').valueAsDate = firstDay;
+        document.getElementById('financeEndDate').valueAsDate = lastDay;
+    }
+
+    resetFinanceFilter() {
+        this.initializeFinanceDateFilter();
+        this.renderFinances();
+    }
+
+    getFinanceDateRange() {
+        const startDate = document.getElementById('financeStartDate').value;
+        const endDate = document.getElementById('financeEndDate').value;
+        return { startDate, endDate };
+    }
+
+    filterFinanceItemsByDate(items) {
+        const { startDate, endDate } = this.getFinanceDateRange();
+        
+        if (!startDate && !endDate) {
+            return items;
+        }
+
+        return items.filter(item => {
+            if (!item.date) return false;
+            
+            if (startDate && item.date < startDate) return false;
+            if (endDate && item.date > endDate) return false;
+            
+            return true;
+        });
+    }
+
     renderFinances() {
         this.updateFinanceSummary();
         this.renderExpenses();
         this.renderRevenue();
+        this.renderCharges();
     }
 
     updateFinanceSummary() {
-        const expenses = storage.getExpenses();
-        const revenue = storage.getRevenue();
+        const expenses = this.filterFinanceItemsByDate(storage.getExpenses());
+        const revenue = this.filterFinanceItemsByDate(storage.getRevenue());
+        const charges = this.filterFinanceItemsByDate(storage.getCharges());
 
         const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+        const totalCharges = charges.reduce((sum, c) => sum + (c.amount || 0), 0);
         const totalRevenue = revenue.reduce((sum, r) => sum + (r.amount || 0), 0);
-        const net = totalRevenue - totalExpenses;
+        const net = totalRevenue - totalExpenses - totalCharges;
 
         document.getElementById('totalIncome').textContent = '$' + totalRevenue.toFixed(2);
-        document.getElementById('totalExpenses').textContent = '$' + totalExpenses.toFixed(2);
+        document.getElementById('totalExpenses').textContent = '$' + (totalExpenses + totalCharges).toFixed(2);
         document.getElementById('netBalance').textContent = '$' + net.toFixed(2);
     }
 
     renderExpenses() {
-        const expenses = storage.getExpenses();
+        const expenses = this.filterFinanceItemsByDate(storage.getExpenses());
         this.renderFinanceList(expenses, 'expensesList', 'expense');
     }
 
     renderRevenue() {
-        const revenue = storage.getRevenue();
+        const revenue = this.filterFinanceItemsByDate(storage.getRevenue());
         this.renderFinanceList(revenue, 'revenueList', 'revenue', true);
+    }
+
+    renderCharges() {
+        const charges = this.filterFinanceItemsByDate(storage.getCharges());
+        this.renderFinanceList(charges, 'chargesList', 'charge');
     }
 
     renderFinanceList(items, containerId, type, isIncome = false) {
@@ -1013,17 +1064,18 @@ class TaskManager {
         // Load categories first
         this.loadCategoryDropdown('finance');
 
-        // Show recurring option for expenses and revenues
+        // Show recurring option only for expenses and revenues (not for charges)
         recurringGroup.style.display = ['expense', 'revenue'].includes(type) ? 'block' : 'none';
 
         // Set modal title
-        const titles = { expense: 'Add Expense', revenue: 'Add Revenue' };
+        const titles = { expense: 'Add Expense', revenue: 'Add Revenue', charge: 'Add Other Charge' };
         document.getElementById('financeModalTitle').textContent = financeId ? `Edit ${type}` : titles[type];
 
         if (financeId) {
             let item = null;
             if (type === 'expense') item = storage.getExpenses().find(e => e.id === financeId);
             else if (type === 'revenue') item = storage.getRevenue().find(r => r.id === financeId);
+            else if (type === 'charge') item = storage.getCharges().find(c => c.id === financeId);
 
             if (item) {
                 document.getElementById('financeDescription').value = item.description;
@@ -1056,7 +1108,7 @@ class TaskManager {
             category: document.getElementById('financeCategory').value
         };
 
-        // Add recurring for expenses and revenues
+        // Add recurring for expenses and revenues (but not for charges)
         if (['expense', 'revenue'].includes(this.currentEditingFinanceType)) {
             financeItem.recurring = document.getElementById('financeRecurring').value;
         }
@@ -1073,6 +1125,12 @@ class TaskManager {
             } else {
                 storage.addRevenue(financeItem);
             }
+        } else if (this.currentEditingFinanceType === 'charge') {
+            if (this.currentEditingFinanceId) {
+                storage.updateCharge(this.currentEditingFinanceId, financeItem);
+            } else {
+                storage.addCharge(financeItem);
+            }
         }
 
         this.closeFinanceModal();
@@ -1086,6 +1144,8 @@ class TaskManager {
                     storage.deleteExpense(this.currentEditingFinanceId);
                 } else if (this.currentEditingFinanceType === 'revenue') {
                     storage.deleteRevenue(this.currentEditingFinanceId);
+                } else if (this.currentEditingFinanceType === 'charge') {
+                    storage.deleteCharge(this.currentEditingFinanceId);
                 }
                 this.closeFinanceModal();
                 this.renderFinances();
