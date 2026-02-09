@@ -1,0 +1,360 @@
+// ========================
+// Storage Management with Versioning
+// ========================
+
+const STORAGE_VERSION = '1.0.0';
+const STORAGE_KEY = 'taskManagerData';
+const DATA_SCHEMA_VERSION = 1;
+
+class StorageManager {
+    constructor() {
+        this.initializeStorage();
+    }
+
+    initializeStorage() {
+        const existingData = localStorage.getItem(STORAGE_KEY);
+        if (!existingData) {
+            this.createInitialData();
+        }
+    }
+
+    createInitialData() {
+        const initialData = {
+            version: STORAGE_VERSION,
+            schemaVersion: DATA_SCHEMA_VERSION,
+            lastUpdated: new Date().toISOString(),
+            tasks: [],
+            projects: [],
+            habits: [],
+            dailyHabitLogs: [],
+            bills: [],
+            expenses: [],
+            revenue: [],
+            userStats: {
+                totalPoints: 0,
+                level: 1,
+                dailyStreak: 0,
+                lastActivityDate: null,
+                pointsBreakdown: {
+                    tasks: 0,
+                    projects: 0,
+                    habits: 0,
+                    streakBonus: 0
+                }
+            }
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+    }
+
+    getData() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : null;
+    }
+
+    saveData(data) {
+        data.lastUpdated = new Date().toISOString();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // Task Management
+    addTask(task) {
+        const data = this.getData();
+        task.id = this.generateId();
+        task.createdDate = new Date().toISOString();
+        task.completed = false;
+        data.tasks.push(task);
+        this.saveData(data);
+        return task;
+    }
+
+    updateTask(taskId, updates) {
+        const data = this.getData();
+        const task = data.tasks.find(t => t.id === taskId);
+        if (task) {
+            Object.assign(task, updates);
+            this.saveData(data);
+        }
+        return task;
+    }
+
+    deleteTask(taskId) {
+        const data = this.getData();
+        data.tasks = data.tasks.filter(t => t.id !== taskId);
+        this.saveData(data);
+    }
+
+    getTasks() {
+        const data = this.getData();
+        return data.tasks || [];
+    }
+
+    // Project Management
+    addProject(project) {
+        const data = this.getData();
+        project.id = this.generateId();
+        project.createdDate = new Date().toISOString();
+        data.projects.push(project);
+        this.saveData(data);
+        return project;
+    }
+
+    updateProject(projectId, updates) {
+        const data = this.getData();
+        const project = data.projects.find(p => p.id === projectId);
+        if (project) {
+            Object.assign(project, updates);
+            this.saveData(data);
+        }
+        return project;
+    }
+
+    deleteProject(projectId) {
+        const data = this.getData();
+        data.projects = data.projects.filter(p => p.id !== projectId);
+        // Remove project from all tasks
+        data.tasks = data.tasks.map(t => {
+            if (t.projectId === projectId) {
+                t.projectId = null;
+            }
+            return t;
+        });
+        this.saveData(data);
+    }
+
+    getProjects() {
+        const data = this.getData();
+        return data.projects || [];
+    }
+
+    // Habit Management
+    addHabit(habit) {
+        const data = this.getData();
+        habit.id = this.generateId();
+        habit.createdDate = new Date().toISOString();
+        habit.streak = 0;
+        habit.lastCompletedDate = null;
+        data.habits.push(habit);
+        this.saveData(data);
+        return habit;
+    }
+
+    updateHabit(habitId, updates) {
+        const data = this.getData();
+        const habit = data.habits.find(h => h.id === habitId);
+        if (habit) {
+            Object.assign(habit, updates);
+            this.saveData(data);
+        }
+        return habit;
+    }
+
+    deleteHabit(habitId) {
+        const data = this.getData();
+        data.habits = data.habits.filter(h => h.id !== habitId);
+        this.saveData(data);
+    }
+
+    getHabits() {
+        const data = this.getData();
+        return data.habits || [];
+    }
+
+    logHabitCompletion(habitId, date = new Date()) {
+        const data = this.getData();
+        const dateStr = this.formatDate(date);
+        
+        data.dailyHabitLogs.push({
+            id: this.generateId(),
+            habitId,
+            date: dateStr,
+            timestamp: new Date().toISOString()
+        });
+
+        // Update habit streak
+        const habit = data.habits.find(h => h.id === habitId);
+        if (habit) {
+            habit.lastCompletedDate = dateStr;
+            habit.streak = (habit.streak || 0) + 1;
+        }
+
+        this.saveData(data);
+    }
+
+    isHabitCompletedToday(habitId) {
+        const data = this.getData();
+        const todayStr = this.formatDate(new Date());
+        return data.dailyHabitLogs.some(log => log.habitId === habitId && log.date === todayStr);
+    }
+
+    // Finance Management
+    addBill(bill) {
+        const data = this.getData();
+        bill.id = this.generateId();
+        bill.createdDate = new Date().toISOString();
+        data.bills.push(bill);
+        this.saveData(data);
+        return bill;
+    }
+
+    updateBill(billId, updates) {
+        const data = this.getData();
+        const bill = data.bills.find(b => b.id === billId);
+        if (bill) {
+            Object.assign(bill, updates);
+            this.saveData(data);
+        }
+        return bill;
+    }
+
+    deleteBill(billId) {
+        const data = this.getData();
+        data.bills = data.bills.filter(b => b.id !== billId);
+        this.saveData(data);
+    }
+
+    getBills() {
+        const data = this.getData();
+        return data.bills || [];
+    }
+
+    addExpense(expense) {
+        const data = this.getData();
+        expense.id = this.generateId();
+        expense.createdDate = new Date().toISOString();
+        data.expenses.push(expense);
+        this.saveData(data);
+        return expense;
+    }
+
+    updateExpense(expenseId, updates) {
+        const data = this.getData();
+        const expense = data.expenses.find(e => e.id === expenseId);
+        if (expense) {
+            Object.assign(expense, updates);
+            this.saveData(data);
+        }
+        return expense;
+    }
+
+    deleteExpense(expenseId) {
+        const data = this.getData();
+        data.expenses = data.expenses.filter(e => e.id !== expenseId);
+        this.saveData(data);
+    }
+
+    getExpenses() {
+        const data = this.getData();
+        return data.expenses || [];
+    }
+
+    addRevenue(revenue) {
+        const data = this.getData();
+        revenue.id = this.generateId();
+        revenue.createdDate = new Date().toISOString();
+        data.revenue.push(revenue);
+        this.saveData(data);
+        return revenue;
+    }
+
+    updateRevenue(revenueId, updates) {
+        const data = this.getData();
+        const item = data.revenue.find(r => r.id === revenueId);
+        if (item) {
+            Object.assign(item, updates);
+            this.saveData(data);
+        }
+        return item;
+    }
+
+    deleteRevenue(revenueId) {
+        const data = this.getData();
+        data.revenue = data.revenue.filter(r => r.id !== revenueId);
+        this.saveData(data);
+    }
+
+    getRevenue() {
+        const data = this.getData();
+        return data.revenue || [];
+    }
+
+    // Points Management
+    addPoints(amount, source) {
+        const data = this.getData();
+        data.userStats.totalPoints += amount;
+        if (data.userStats.pointsBreakdown[source]) {
+            data.userStats.pointsBreakdown[source] += amount;
+        }
+        data.userStats.level = Math.floor(data.userStats.totalPoints / 100) + 1;
+        this.saveData(data);
+    }
+
+    updateDailyStreak(increment = true) {
+        const data = this.getData();
+        const today = this.formatDate(new Date());
+
+        if (increment) {
+            if (data.userStats.lastActivityDate !== today) {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                if (data.userStats.lastActivityDate !== this.formatDate(yesterday)) {
+                    data.userStats.dailyStreak = 1;
+                } else {
+                    data.userStats.dailyStreak += 1;
+                }
+            }
+        }
+
+        data.userStats.lastActivityDate = today;
+        this.saveData(data);
+    }
+
+    getUserStats() {
+        const data = this.getData();
+        return data.userStats;
+    }
+
+    // Utility Methods
+    generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    exportData() {
+        const data = this.getData();
+        return JSON.stringify(data, null, 2);
+    }
+
+    importData(jsonString) {
+        try {
+            const data = JSON.parse(jsonString);
+            // Validate that it has the required structure
+            if (data.version && data.tasks !== undefined && data.projects !== undefined) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error('Import error:', e);
+            return false;
+        }
+    }
+
+    clearAllData() {
+        if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+            localStorage.removeItem(STORAGE_KEY);
+            this.createInitialData();
+            return true;
+        }
+        return false;
+    }
+}
+
+// Initialize global storage manager
+const storage = new StorageManager();

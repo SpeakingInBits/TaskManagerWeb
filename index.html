@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="css/styles.css">
+
+    <script src="js/storage.js"></script>
+    <script src="js/app.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>📋 Task Manager Pro</h1>
+                <div class="header-stats">
+                    <div class="stat">
+                        <span class="stat-label">Points</span>
+                        <span class="stat-value" id="totalPoints">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Level</span>
+                        <span class="stat-value" id="userLevel">1</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Streak</span>
+                        <span class="stat-value" id="dailyStreak">0</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="dashboard">🏠 Dashboard</button>
+            <button class="nav-tab" data-tab="tasks">✓ Tasks</button>
+            <button class="nav-tab" data-tab="projects">📁 Projects</button>
+            <button class="nav-tab" data-tab="habits">⭐ Habits</button>
+            <button class="nav-tab" data-tab="finances">💰 Finances</button>
+            <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <section class="tab-content active" id="dashboard-tab">
+                <div class="dashboard-grid">
+                    <!-- Today's Overview -->
+                    <div class="card dashboard-card">
+                        <h2>Today's Overview</h2>
+                        <div class="overview-stats">
+                            <div class="overview-item">
+                                <span class="label">Tasks Due Today</span>
+                                <span class="value" id="todayTasksCount">0</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="label">Completed Today</span>
+                                <span class="value" id="completedTodayCount">0</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="label">Habits Done</span>
+                                <span class="value" id="habitsDoneCount">0</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="label">Bills Due</span>
+                                <span class="value" id="billsDueCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Points Breakdown -->
+                    <div class="card dashboard-card">
+                        <h2>Points Breakdown</h2>
+                        <div class="points-breakdown">
+                            <div class="breakdown-item">
+                                <span class="label">Tasks</span>
+                                <span class="value" id="tasksPoints">0</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="label">Projects</span>
+                                <span class="value" id="projectsPoints">0</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="label">Habits</span>
+                                <span class="value" id="habitsPoints">0</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="label">Streak Bonus</span>
+                                <span class="value" id="streakBonus">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="card dashboard-card full-width">
+                        <h2>Recent Activity</h2>
+                        <div class="activity-list" id="recentActivity">
+                            <p class="empty-state">No activity yet. Start completing tasks!</p>
+                        </div>
+                    </div>
+
+                    <!-- Project Progress -->
+                    <div class="card dashboard-card full-width">
+                        <h2>Active Projects</h2>
+                        <div class="projects-summary" id="projectsSummary">
+                            <p class="empty-state">No active projects. Create one to get started!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tasks Tab -->
+            <section class="tab-content" id="tasks-tab">
+                <div class="tasks-container">
+                    <div class="tasks-header">
+                        <h2>Tasks</h2>
+                        <button class="btn btn-primary" id="addTaskBtn">+ Add Task</button>
+                    </div>
+
+                    <!-- Task Filters -->
+                    <div class="filters">
+                        <select id="categoryFilter" class="filter-select">
+                            <option value="">All Categories</option>
+                        </select>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                        <input type="text" id="searchTasks" class="filter-input" placeholder="Search tasks...">
+                    </div>
+
+                    <!-- Task List -->
+                    <div class="task-list" id="taskList">
+                        <p class="empty-state">No tasks yet. Add one to get started!</p>
+                    </div>
+                </div>
+
+                <!-- Task Modal -->
+                <div class="modal" id="taskModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Task Details</h3>
+                            <button class="close-btn">&times;</button>
+                        </div>
+                        <form id="taskForm" class="task-form">
+                            <div class="form-group">
+                                <label for="taskTitle">Title *</label>
+                                <input type="text" id="taskTitle" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="taskDescription">Description</label>
+                                <textarea id="taskDescription" rows="4"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="taskDueDate">Due Date</label>
+                                    <input type="date" id="taskDueDate">
+                                </div>
+                                <div class="form-group">
+                                    <label for="taskCategory">Category</label>
+                                    <input type="text" id="taskCategory" placeholder="e.g., Work">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="taskPriority">Priority</label>
+                                    <select id="taskPriority">
+                                        <option value="low">Low</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="taskPoints">Points Value</label>
+                                    <input type="number" id="taskPoints" min="1" value="10">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="taskRepeatType">Repeat Type</label>
+                                <select id="taskRepeatType">
+                                    <option value="none">None</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="yearly">Yearly</option>
+                                    <option value="custom">Custom Days</option>
+                                    <option value="movable">Movable (From Completion)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="customRepeatGroup" style="display: none;">
+                                <label for="customRepeatDays">Repeat Every (Days)</label>
+                                <input type="number" id="customRepeatDays" min="1">
+                            </div>
+                            <div class="form-group" id="movableRepeatGroup" style="display: none;">
+                                <label for="movableRepeatDays">Days Until Due (From Completion)</label>
+                                <input type="number" id="movableRepeatDays" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="taskProject">Project</label>
+                                <select id="taskProject">
+                                    <option value="">None</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save Task</button>
+                                <button type="button" class="btn btn-secondary" id="deleteTaskBtn" style="display: none;">Delete</button>
+                                <button type="button" class="btn btn-secondary" id="cancelTaskBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Projects Tab -->
+            <section class="tab-content" id="projects-tab">
+                <div class="projects-container">
+                    <div class="projects-header">
+                        <h2>Projects</h2>
+                        <button class="btn btn-primary" id="addProjectBtn">+ Add Project</button>
+                    </div>
+
+                    <!-- Projects List -->
+                    <div class="projects-list" id="projectsList">
+                        <p class="empty-state">No projects yet. Create one to organize your tasks!</p>
+                    </div>
+                </div>
+
+                <!-- Project Modal -->
+                <div class="modal" id="projectModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Project Details</h3>
+                            <button class="close-btn">&times;</button>
+                        </div>
+                        <form id="projectForm" class="project-form">
+                            <div class="form-group">
+                                <label for="projectName">Name *</label>
+                                <input type="text" id="projectName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="projectDescription">Description</label>
+                                <textarea id="projectDescription" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="projectColor">Color Tag</label>
+                                <select id="projectColor">
+                                    <option value="blue">Blue</option>
+                                    <option value="red">Red</option>
+                                    <option value="green">Green</option>
+                                    <option value="yellow">Yellow</option>
+                                    <option value="purple">Purple</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save Project</button>
+                                <button type="button" class="btn btn-secondary" id="deleteProjectBtn" style="display: none;">Delete</button>
+                                <button type="button" class="btn btn-secondary" id="cancelProjectBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Habits Tab -->
+            <section class="tab-content" id="habits-tab">
+                <div class="habits-container">
+                    <div class="habits-header">
+                        <h2>Daily Habits</h2>
+                        <button class="btn btn-primary" id="addHabitBtn">+ Add Habit</button>
+                    </div>
+
+                    <!-- Habits List -->
+                    <div class="habits-list" id="habitsList">
+                        <p class="empty-state">No habits yet. Create daily habits to build streaks!</p>
+                    </div>
+                </div>
+
+                <!-- Habit Modal -->
+                <div class="modal" id="habitModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Daily Habit</h3>
+                            <button class="close-btn">&times;</button>
+                        </div>
+                        <form id="habitForm" class="habit-form">
+                            <div class="form-group">
+                                <label for="habitName">Habit Name *</label>
+                                <input type="text" id="habitName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="habitDescription">Description</label>
+                                <textarea id="habitDescription" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="habitIcon">Icon/Emoji</label>
+                                <input type="text" id="habitIcon" placeholder="e.g., 💪" value="⭐">
+                            </div>
+                            <div class="form-group">
+                                <label for="habitPoints">Points per Completion</label>
+                                <input type="number" id="habitPoints" min="1" value="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="habitFrequency">Frequency</label>
+                                <select id="habitFrequency">
+                                    <option value="daily">Daily</option>
+                                    <option value="weekdays">Weekdays Only</option>
+                                    <option value="weekends">Weekends Only</option>
+                                    <option value="custom">Custom Days</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save Habit</button>
+                                <button type="button" class="btn btn-secondary" id="deleteHabitBtn" style="display: none;">Delete</button>
+                                <button type="button" class="btn btn-secondary" id="cancelHabitBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Finances Tab -->
+            <section class="tab-content" id="finances-tab">
+                <div class="finances-container">
+                    <div class="finances-header">
+                        <h2>Finances</h2>
+                        <div class="finance-buttons">
+                            <button class="btn btn-success" id="addBillBtn">+ Add Bill</button>
+                            <button class="btn btn-success" id="addExpenseBtn">+ Add Expense</button>
+                            <button class="btn btn-success" id="addRevenueBtn">+ Add Revenue</button>
+                        </div>
+                    </div>
+
+                    <!-- Finance Summary -->
+                    <div class="finance-summary">
+                        <div class="summary-card income">
+                            <span class="label">Total Income</span>
+                            <span class="value" id="totalIncome">$0.00</span>
+                        </div>
+                        <div class="summary-card expense">
+                            <span class="label">Total Expenses</span>
+                            <span class="value" id="totalExpenses">$0.00</span>
+                        </div>
+                        <div class="summary-card balance">
+                            <span class="label">Net Balance</span>
+                            <span class="value" id="netBalance">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Tabs for Bills, Expenses, Revenue -->
+                    <div class="finance-tabs">
+                        <button class="finance-tab active" data-finance-tab="bills">Bills</button>
+                        <button class="finance-tab" data-finance-tab="expenses">Expenses</button>
+                        <button class="finance-tab" data-finance-tab="revenue">Revenue</button>
+                    </div>
+
+                    <!-- Bills List -->
+                    <div class="finance-content active" id="bills-content">
+                        <div class="finance-list" id="billsList">
+                            <p class="empty-state">No bills. Add one to track recurring payments!</p>
+                        </div>
+                    </div>
+
+                    <!-- Expenses List -->
+                    <div class="finance-content" id="expenses-content">
+                        <div class="finance-list" id="expensesList">
+                            <p class="empty-state">No expenses. Add one to track spending!</p>
+                        </div>
+                    </div>
+
+                    <!-- Revenue List -->
+                    <div class="finance-content" id="revenue-content">
+                        <div class="finance-list" id="revenueList">
+                            <p class="empty-state">No revenue. Add one to track income!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Finance Modal -->
+                <div class="modal" id="financeModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="financeModalTitle">Add Finance Item</h3>
+                            <button class="close-btn">&times;</button>
+                        </div>
+                        <form id="financeForm" class="finance-form">
+                            <div class="form-group">
+                                <label for="financeDescription">Description *</label>
+                                <input type="text" id="financeDescription" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="financeAmount">Amount *</label>
+                                <input type="number" id="financeAmount" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="financeDate">Date</label>
+                                <input type="date" id="financeDate">
+                            </div>
+                            <div class="form-group" id="financeRecurringGroup">
+                                <label for="financeRecurring">Recurring</label>
+                                <select id="financeRecurring">
+                                    <option value="once">One-time</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="yearly">Yearly</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="financeCategory">Category</label>
+                                <input type="text" id="financeCategory">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save</button>
+                                <button type="button" class="btn btn-secondary" id="deleteFinanceBtn" style="display: none;">Delete</button>
+                                <button type="button" class="btn btn-secondary" id="cancelFinanceBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Tab -->
+            <section class="tab-content" id="settings-tab">
+                <div class="settings-container">
+                    <h2>Settings</h2>
+                    
+                    <div class="settings-section">
+                        <h3>Data Management</h3>
+                        <div class="setting-item">
+                            <label>Export Data</label>
+                            <button class="btn btn-secondary" id="exportBtn">Download JSON</button>
+                        </div>
+                        <div class="setting-item">
+                            <label>Import Data</label>
+                            <input type="file" id="importFile" accept=".json" style="display: none;">
+                            <button class="btn btn-secondary" id="importBtn">Upload JSON</button>
+                        </div>
+                        <div class="setting-item">
+                            <label>Clear All Data</label>
+                            <button class="btn btn-danger" id="clearDataBtn">Clear Local Storage</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Data Version</h3>
+                        <p>Version: <span id="dataVersion">1.0.0</span></p>
+                        <p>Last Updated: <span id="lastUpdated">Never</span></p>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>About</h3>
+                        <p>Task Manager Pro - Your complete task and habit management system.</p>
+                        <p>All data is stored locally in your browser.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
