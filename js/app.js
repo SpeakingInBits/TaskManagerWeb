@@ -9,6 +9,8 @@ class TaskManager {
         this.currentEditingHabitId = null;
         this.currentEditingFinanceId = null;
         this.currentEditingFinanceType = null;
+        this.currentEditingRewardId = null;
+        this.currentEditingFinanceType = null;
         this.emojis = [
             // Activity
             '💪', '🏃', '🚴', '🏊', '🧘', '💃', '🕺', '⛹️',
@@ -101,6 +103,12 @@ class TaskManager {
         document.getElementById('filterFinancesBtn').addEventListener('click', () => this.renderFinances());
         document.getElementById('resetFinanceFilterBtn').addEventListener('click', () => this.resetFinanceFilter());
 
+        // Shop section
+        document.getElementById('addRewardBtn').addEventListener('click', () => this.openRewardModal());
+        document.getElementById('rewardForm').addEventListener('submit', (e) => this.saveReward(e));
+        document.getElementById('cancelRewardBtn').addEventListener('click', () => this.closeRewardModal());
+        document.getElementById('deleteRewardBtn').addEventListener('click', () => this.deleteReward());
+
         // Modal close buttons
         document.querySelectorAll('.close-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -125,6 +133,38 @@ class TaskManager {
                     modal.classList.remove('active');
                 }
             });
+        });
+
+        // Hamburger menu toggle
+        document.getElementById('hamburgerMenu').addEventListener('click', () => {
+            const navTabs = document.getElementById('navTabs');
+            const hamburger = document.getElementById('hamburgerMenu');
+            navTabs.classList.toggle('show');
+            hamburger.classList.toggle('active');
+        });
+
+        // Close mobile menu when a tab is clicked
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    const navTabs = document.getElementById('navTabs');
+                    const hamburger = document.getElementById('hamburgerMenu');
+                    navTabs.classList.remove('show');
+                    hamburger.classList.remove('active');
+                }
+            });
+        });
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                const navTabs = document.getElementById('navTabs');
+                const hamburger = document.getElementById('hamburgerMenu');
+                if (!navTabs.contains(e.target) && !hamburger.contains(e.target)) {
+                    navTabs.classList.remove('show');
+                    hamburger.classList.remove('active');
+                }
+            }
         });
     }
 
@@ -157,6 +197,8 @@ class TaskManager {
             this.renderHabits();
         } else if (tabName === 'finances') {
             this.renderFinances();
+        } else if (tabName === 'shop') {
+            this.renderShop();
         }
     }
 
@@ -1236,6 +1278,134 @@ class TaskManager {
                 }
                 this.closeFinanceModal();
                 this.renderFinances();
+            }
+        }
+    }
+
+    // ========================
+    // Shop/Rewards Management
+    // ========================
+    renderShop() {
+        const rewards = storage.getRewards();
+        const userStats = storage.getUserStats();
+        const container = document.getElementById('rewardsList');
+        
+        // Update points display
+        document.getElementById('shopPointsDisplay').textContent = userStats.totalPoints;
+
+        if (rewards.length === 0) {
+            container.innerHTML = '<p class="empty-state">No rewards yet. Add rewards to spend your points on!</p>';
+            return;
+        }
+
+        container.innerHTML = rewards.map(reward => `
+            <div class="project-card blue" style="cursor: pointer;" data-reward-id="${reward.id}">
+                <div class="project-title">${reward.name}</div>
+                ${reward.description ? `<div class="project-description">${reward.description}</div>` : ''}
+                <div class="project-stats">
+                    <div class="project-stat">
+                        <span class="project-stat-label">Cost</span>
+                        <span class="project-stat-value">${reward.cost} pts</span>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button class="btn btn-primary purchase-btn" style="flex: 1;" ${userStats.totalPoints < reward.cost ? 'disabled' : ''}>
+                        ${userStats.totalPoints < reward.cost ? 'Not Enough Points' : 'Purchase'}
+                    </button>
+                    <button class="btn btn-secondary edit-reward-btn">Edit</button>
+                </div>
+            </div>
+        `).join('');
+
+        // Add event listeners
+        document.querySelectorAll('.purchase-btn').forEach((btn, index) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const card = e.target.closest('[data-reward-id]');
+                this.purchaseReward(card.dataset.rewardId);
+            });
+        });
+
+        document.querySelectorAll('.edit-reward-btn').forEach((btn, index) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const card = e.target.closest('[data-reward-id]');
+                this.openRewardModal(card.dataset.rewardId);
+            });
+        });
+    }
+
+    openRewardModal(rewardId = null) {
+        this.currentEditingRewardId = rewardId;
+        const modal = document.getElementById('rewardModal');
+        const form = document.getElementById('rewardForm');
+        const deleteBtn = document.getElementById('deleteRewardBtn');
+
+        form.reset();
+        deleteBtn.style.display = 'none';
+
+        document.getElementById('rewardModalTitle').textContent = rewardId ? 'Edit Reward' : 'Add Reward';
+
+        if (rewardId) {
+            const reward = storage.getRewards().find(r => r.id === rewardId);
+            if (reward) {
+                document.getElementById('rewardName').value = reward.name;
+                document.getElementById('rewardDescription').value = reward.description || '';
+                document.getElementById('rewardCost').value = reward.cost;
+                deleteBtn.style.display = 'block';
+            }
+        }
+
+        modal.classList.add('active');
+    }
+
+    closeRewardModal() {
+        document.getElementById('rewardModal').classList.remove('active');
+        this.currentEditingRewardId = null;
+    }
+
+    saveReward(e) {
+        e.preventDefault();
+
+        const reward = {
+            name: document.getElementById('rewardName').value,
+            description: document.getElementById('rewardDescription').value,
+            cost: parseInt(document.getElementById('rewardCost').value)
+        };
+
+        if (this.currentEditingRewardId) {
+            storage.updateReward(this.currentEditingRewardId, reward);
+        } else {
+            storage.addReward(reward);
+        }
+
+        this.closeRewardModal();
+        this.renderShop();
+    }
+
+    deleteReward() {
+        if (this.currentEditingRewardId) {
+            if (confirm('Are you sure you want to delete this reward?')) {
+                storage.deleteReward(this.currentEditingRewardId);
+                this.closeRewardModal();
+                this.renderShop();
+            }
+        }
+    }
+
+    purchaseReward(rewardId) {
+        const reward = storage.getRewards().find(r => r.id === rewardId);
+        if (!reward) return;
+
+        if (confirm(`Purchase "${reward.name}" for ${reward.cost} points?`)) {
+            const result = storage.purchaseReward(rewardId);
+            
+            if (result.success) {
+                alert(`Congratulations! You've purchased: ${reward.name}!\n\nEnjoy your reward! 🎉`);
+                this.renderShop();
+                this.renderDashboard();
+            } else {
+                alert(result.message);
             }
         }
     }

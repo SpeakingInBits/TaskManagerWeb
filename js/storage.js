@@ -30,6 +30,8 @@ class StorageManager {
             expenses: [],
             revenue: [],
             charges: [],
+            rewards: [],
+            purchaseHistory: [],
             categories: {
                 tasks: ['Work', 'Personal', 'Home', 'Shopping'],
                 habits: ['Health', 'Fitness', 'Learning', 'Productivity'],
@@ -298,6 +300,90 @@ class StorageManager {
         const data = this.getData();
         return data.charges || [];
     }
+
+    // Rewards Shop Management
+    addReward(reward) {
+        const data = this.getData();
+        if (!data.rewards) {
+            data.rewards = [];
+        }
+        reward.id = this.generateId();
+        reward.createdDate = new Date().toISOString();
+        reward.purchased = false;
+        data.rewards.push(reward);
+        this.saveData(data);
+        return reward;
+    }
+
+    updateReward(rewardId, updates) {
+        const data = this.getData();
+        if (!data.rewards) {
+            data.rewards = [];
+        }
+        const reward = data.rewards.find(r => r.id === rewardId);
+        if (reward) {
+            Object.assign(reward, updates);
+            this.saveData(data);
+        }
+        return reward;
+    }
+
+    deleteReward(rewardId) {
+        const data = this.getData();
+        if (!data.rewards) {
+            data.rewards = [];
+        }
+        data.rewards = data.rewards.filter(r => r.id !== rewardId);
+        this.saveData(data);
+    }
+
+    getRewards() {
+        const data = this.getData();
+        return data.rewards || [];
+    }
+
+    purchaseReward(rewardId) {
+        const data = this.getData();
+        if (!data.rewards) {
+            data.rewards = [];
+        }
+        if (!data.purchaseHistory) {
+            data.purchaseHistory = [];
+        }
+        
+        const reward = data.rewards.find(r => r.id === rewardId);
+        if (!reward) {
+            return { success: false, message: 'Reward not found' };
+        }
+        
+        if (data.userStats.totalPoints < reward.cost) {
+            return { success: false, message: 'Not enough points' };
+        }
+        
+        // Deduct points
+        data.userStats.totalPoints -= reward.cost;
+        
+        // Add to purchase history
+        const purchase = {
+            id: this.generateId(),
+            rewardId: reward.id,
+            rewardName: reward.name,
+            rewardDescription: reward.description,
+            cost: reward.cost,
+            purchaseDate: new Date().toISOString()
+        };
+        data.purchaseHistory.push(purchase);
+        
+        this.saveData(data);
+        return { success: true, purchase };
+    }
+
+    getPurchaseHistory() {
+        const data = this.getData();
+        return data.purchaseHistory || [];
+    }
+
+    // 
 
     // Points Management
     addPoints(amount, source) {
