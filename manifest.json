@@ -2,7 +2,7 @@
   "name": "Task Manager Pro",
   "short_name": "TaskManager",
   "description": "Complete task and habit management system with gamification",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4CAF50",
