@@ -27,9 +27,13 @@ class StorageManager {
             projects: [],
             habits: [],
             dailyHabitLogs: [],
-            bills: [],
             expenses: [],
             revenue: [],
+            categories: {
+                tasks: ['Work', 'Personal', 'Home', 'Shopping'],
+                habits: ['Health', 'Fitness', 'Learning', 'Productivity'],
+                finance: ['Food', 'Transportation', 'Entertainment', 'Utilities', 'Income']
+            },
             userStats: {
                 totalPoints: 0,
                 level: 1,
@@ -187,37 +191,13 @@ class StorageManager {
         return data.dailyHabitLogs.some(log => log.habitId === habitId && log.date === todayStr);
     }
 
+    countHabitCompletionsToday(habitId) {
+        const data = this.getData();
+        const todayStr = this.formatDate(new Date());
+        return data.dailyHabitLogs.filter(log => log.habitId === habitId && log.date === todayStr).length;
+    }
+
     // Finance Management
-    addBill(bill) {
-        const data = this.getData();
-        bill.id = this.generateId();
-        bill.createdDate = new Date().toISOString();
-        data.bills.push(bill);
-        this.saveData(data);
-        return bill;
-    }
-
-    updateBill(billId, updates) {
-        const data = this.getData();
-        const bill = data.bills.find(b => b.id === billId);
-        if (bill) {
-            Object.assign(bill, updates);
-            this.saveData(data);
-        }
-        return bill;
-    }
-
-    deleteBill(billId) {
-        const data = this.getData();
-        data.bills = data.bills.filter(b => b.id !== billId);
-        this.saveData(data);
-    }
-
-    getBills() {
-        const data = this.getData();
-        return data.bills || [];
-    }
-
     addExpense(expense) {
         const data = this.getData();
         expense.id = this.generateId();
@@ -350,6 +330,32 @@ class StorageManager {
         if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
             localStorage.removeItem(STORAGE_KEY);
             this.createInitialData();
+            return true;
+        }
+        return false;
+    }
+
+    // ========================
+    // Category Management
+    // ========================
+    getCategories(type) {
+        const data = this.getData();
+        return (data.categories && data.categories[type]) || [];
+    }
+
+    addCategory(type, categoryName) {
+        const data = this.getData();
+        if (!data.categories) {
+            data.categories = { tasks: [], habits: [], finance: [] };
+        }
+        if (!data.categories[type]) {
+            data.categories[type] = [];
+        }
+
+        const trimmedName = categoryName.trim();
+        if (trimmedName && !data.categories[type].includes(trimmedName)) {
+            data.categories[type].push(trimmedName);
+            this.saveData(data);
             return true;
         }
         return false;

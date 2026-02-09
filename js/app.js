@@ -9,6 +9,28 @@ class TaskManager {
         this.currentEditingHabitId = null;
         this.currentEditingFinanceId = null;
         this.currentEditingFinanceType = null;
+        this.emojis = [
+            // Activity
+            '💪', '🏃', '🚴', '🏊', '🧘', '💃', '🕺', '⛹️',
+            // Food & Health
+            '🥗', '🍎', '🥕', '💊', '🏥', '🧄', '🥤', '☕',
+            // Work & Productivity
+            '📚', '✍️', '💼', '🎯', '📊', '💻', '📱', '⌨️',
+            // Learning & Mind
+            '🧠', '📖', '🎓', '💡', '🔬', '🎨', '🎵', '🎭',
+            // Nature & Outdoors
+            '🌿', '🌳', '🌞', '🌙', '🌊', '⛰️', '🏞️', '🦋',
+            // Sleep & Rest
+            '😴', '🛏️', '😌', '🕯️', '🌙', '💤', '🧖', '🛀',
+            // Social & Fun
+            '👨‍👩‍👧‍👦', '🤝', '🎉', '😊', '❤️', '🤗', '😂', '👏',
+            // Sports & Games
+            '⚽', '🏀', '🎾', '🏐', '🎯', '♟️', '🎲', '🃏',
+            // Habits & Goals
+            '⭐', '🎯', '🏆', '🥇', '🔥', '💎', '✨', '🌟',
+            // More Emojis
+            '🚀', '🌈', '🎁', '📅', '⏰', '💰', '🎪', '🎢'
+        ];
         this.init();
     }
 
@@ -33,6 +55,9 @@ class TaskManager {
         document.getElementById('cancelTaskBtn').addEventListener('click', () => this.closeTaskModal());
         document.getElementById('deleteTaskBtn').addEventListener('click', () => this.deleteTask());
         document.getElementById('taskRepeatType').addEventListener('change', (e) => this.updateRepeatTypeUI(e.target.value));
+        document.getElementById('taskCategory').addEventListener('change', (e) => this.handleCategoryChange('task', e.target.value));
+        document.getElementById('taskCategorySave').addEventListener('click', () => this.handleAddCategory('task'));
+        document.getElementById('taskCategoryCancel').addEventListener('click', () => this.cancelAddCategory('task'));
         document.getElementById('categoryFilter').addEventListener('change', () => this.filterTasks());
         document.getElementById('statusFilter').addEventListener('change', () => this.filterTasks());
         document.getElementById('searchTasks').addEventListener('input', () => this.filterTasks());
@@ -48,14 +73,21 @@ class TaskManager {
         document.getElementById('habitForm').addEventListener('submit', (e) => this.saveHabit(e));
         document.getElementById('cancelHabitBtn').addEventListener('click', () => this.closeHabitModal());
         document.getElementById('deleteHabitBtn').addEventListener('click', () => this.deleteHabit());
+        document.getElementById('habitEmojiBtn').addEventListener('click', () => this.openEmojiPicker());
+        document.getElementById('closeEmojiBtn').addEventListener('click', () => this.closeEmojiPicker());
+        document.getElementById('habitCategory').addEventListener('change', (e) => this.handleCategoryChange('habit', e.target.value));
+        document.getElementById('habitCategorySave').addEventListener('click', () => this.handleAddCategory('habit'));
+        document.getElementById('habitCategoryCancel').addEventListener('click', () => this.cancelAddCategory('habit'));
 
         // Finances section
-        document.getElementById('addBillBtn').addEventListener('click', () => this.openFinanceModal('bill'));
         document.getElementById('addExpenseBtn').addEventListener('click', () => this.openFinanceModal('expense'));
         document.getElementById('addRevenueBtn').addEventListener('click', () => this.openFinanceModal('revenue'));
         document.getElementById('financeForm').addEventListener('submit', (e) => this.saveFinance(e));
         document.getElementById('cancelFinanceBtn').addEventListener('click', () => this.closeFinanceModal());
         document.getElementById('deleteFinanceBtn').addEventListener('click', () => this.deleteFinance());
+        document.getElementById('financeCategory').addEventListener('change', (e) => this.handleCategoryChange('finance', e.target.value));
+        document.getElementById('financeCategorySave').addEventListener('click', () => this.handleAddCategory('finance'));
+        document.getElementById('financeCategoryCancel').addEventListener('click', () => this.cancelAddCategory('finance'));
 
         document.querySelectorAll('.finance-tab').forEach(tab => {
             tab.addEventListener('click', (e) => this.switchFinanceTab(e.target.dataset.financeTab));
@@ -143,7 +175,6 @@ class TaskManager {
         const habits = storage.getHabits();
         const expenses = storage.getExpenses();
         const revenue = storage.getRevenue();
-        const bills = storage.getBills();
         const userStats = storage.getUserStats();
         const logs = storage.getData().dailyHabitLogs || [];
 
@@ -156,12 +187,10 @@ class TaskManager {
         const todayTasks = tasks.filter(t => t.dueDate === today && !t.completed);
         const completedToday = tasks.filter(t => t.completedDate === today);
         const habitsDone = logs.filter(log => log.date === today).length;
-        const billsDue = bills.filter(b => b.date === today);
 
         document.getElementById('todayTasksCount').textContent = todayTasks.length;
         document.getElementById('completedTodayCount').textContent = completedToday.length;
         document.getElementById('habitsDoneCount').textContent = habitsDone;
-        document.getElementById('billsDueCount').textContent = billsDue.length;
 
         // Points breakdown
         document.getElementById('tasksPoints').textContent = userStats.pointsBreakdown.tasks;
@@ -355,6 +384,11 @@ class TaskManager {
         // Update project dropdown
         this.updateProjectSelect();
 
+        // Clear all task day checkboxes
+        document.querySelectorAll('input[name="taskDay"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
         if (taskId) {
             const task = storage.getTasks().find(t => t.id === taskId);
             if (task) {
@@ -366,6 +400,7 @@ class TaskManager {
                 document.getElementById('taskPoints').value = task.points || 10;
                 document.getElementById('taskRepeatType').value = task.repeatType || 'none';
                 document.getElementById('taskProject').value = task.projectId || '';
+                document.getElementById('taskRepeatUnit').value = task.repeatUnit || 1;
 
                 if (task.repeatType === 'custom') {
                     document.getElementById('customRepeatDays').value = task.customRepeatDays || '';
@@ -374,12 +409,27 @@ class TaskManager {
                     document.getElementById('movableRepeatDays').value = task.movableRepeatDays || '';
                 }
 
+                // Load daysOfWeek if available
+                if (task.daysOfWeek && Array.isArray(task.daysOfWeek)) {
+                    task.daysOfWeek.forEach(day => {
+                        const checkbox = document.querySelector(`input[name="taskDay"][value="${day}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                }
+
                 deleteBtn.style.display = 'block';
 
                 this.updateRepeatTypeUI(task.repeatType);
             }
+        } else {
+            document.getElementById('taskRepeatUnit').value = 1;
         }
 
+        // Load categories
+        this.loadCategoryDropdown('task');
+        
         modal.classList.add('active');
     }
 
@@ -391,9 +441,30 @@ class TaskManager {
     updateRepeatTypeUI(repeatType) {
         const customGroup = document.getElementById('customRepeatGroup');
         const movableGroup = document.getElementById('movableRepeatGroup');
+        const repeatUnitGroup = document.getElementById('repeatUnitGroup');
+        const taskDaysGroup = document.getElementById('taskDaysGroup');
+        const repeatUnitLabel = document.getElementById('repeatUnitLabel');
 
         customGroup.style.display = repeatType === 'custom' ? 'block' : 'none';
         movableGroup.style.display = repeatType === 'movable' ? 'block' : 'none';
+        
+        // Show repeat unit for daily, weekly, monthly, yearly
+        if (['daily', 'weekly', 'monthly', 'yearly'].includes(repeatType)) {
+            repeatUnitGroup.style.display = 'block';
+            // Update label based on repeat type
+            const labels = {
+                daily: 'day(s)',
+                weekly: 'week(s)',
+                monthly: 'month(s)',
+                yearly: 'year(s)'
+            };
+            repeatUnitLabel.textContent = labels[repeatType] || 'unit(s)';
+        } else {
+            repeatUnitGroup.style.display = 'none';
+        }
+        
+        // Show days selector for weekly and daily
+        taskDaysGroup.style.display = (['weekly', 'daily'].includes(repeatType)) ? 'block' : 'none';
     }
 
     updateProjectSelect() {
@@ -406,6 +477,10 @@ class TaskManager {
     saveTask(e) {
         e.preventDefault();
 
+        // Get selected days for weekly/daily tasks
+        const selectedDays = Array.from(document.querySelectorAll('input[name="taskDay"]:checked'))
+            .map(checkbox => parseInt(checkbox.value));
+
         const task = {
             title: document.getElementById('taskTitle').value,
             description: document.getElementById('taskDescription').value,
@@ -416,6 +491,14 @@ class TaskManager {
             repeatType: document.getElementById('taskRepeatType').value,
             projectId: document.getElementById('taskProject').value || null
         };
+
+        // Add repeatUnit for daily, weekly, monthly, yearly tasks
+        if (['daily', 'weekly', 'monthly', 'yearly'].includes(task.repeatType)) {
+            task.repeatUnit = parseInt(document.getElementById('taskRepeatUnit').value) || 1;
+            if (selectedDays.length > 0) {
+                task.daysOfWeek = selectedDays;
+            }
+        }
 
         if (task.repeatType === 'custom') {
             task.customRepeatDays = parseInt(document.getElementById('customRepeatDays').value);
@@ -601,7 +684,11 @@ class TaskManager {
     }
 
     renderHabitCard(habit) {
-        const isCompletedToday = storage.isHabitCompletedToday(habit.id);
+        const today = new Date().getDay();
+        const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(today);
+        
+        // Count completions today
+        const todaysCompletions = storage.countHabitCompletionsToday(habit.id);
 
         return `
             <div class="habit-card" data-habit-id="${habit.id}">
@@ -617,9 +704,13 @@ class TaskManager {
                         <span class="habit-stat-label">Points</span>
                         <span class="habit-stat-value">${habit.points}</span>
                     </div>
+                    <div class="habit-stat">
+                        <span class="habit-stat-label">Today</span>
+                        <span class="habit-stat-value">${todaysCompletions || 0}</span>
+                    </div>
                 </div>
-                <button class="habit-checkbox ${isCompletedToday ? 'completed' : ''}" data-habit-id="${habit.id}">
-                    ${isCompletedToday ? '✓ Done Today' : 'Mark as Done'}
+                <button class="habit-checkbox ${!isValidDay ? 'disabled' : ''}" data-habit-id="${habit.id}" ${!isValidDay ? 'disabled' : ''}>
+                    ${!isValidDay ? '✗ Not Today' : '+ Complete'}
                 </button>
             </div>
         `;
@@ -634,6 +725,12 @@ class TaskManager {
         form.reset();
         deleteBtn.style.display = 'none';
         document.getElementById('habitIcon').value = '⭐';
+        document.getElementById('habitIconDisplay').textContent = '⭐';
+        
+        // Clear all day checkboxes
+        document.querySelectorAll('input[name="habitDay"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
 
         if (habitId) {
             const habit = storage.getHabits().find(h => h.id === habitId);
@@ -641,11 +738,35 @@ class TaskManager {
                 document.getElementById('habitName').value = habit.name;
                 document.getElementById('habitDescription').value = habit.description || '';
                 document.getElementById('habitIcon').value = habit.icon || '⭐';
+                document.getElementById('habitIconDisplay').textContent = habit.icon || '⭐';
+                document.getElementById('habitCategory').value = habit.category || '';
                 document.getElementById('habitPoints').value = habit.points || 5;
-                document.getElementById('habitFrequency').value = habit.frequency || 'daily';
                 deleteBtn.style.display = 'block';
+                
+                // Load daysOfWeek if available
+                if (habit.daysOfWeek && Array.isArray(habit.daysOfWeek)) {
+                    habit.daysOfWeek.forEach(day => {
+                        const checkbox = document.querySelector(`input[name="habitDay"][value="${day}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                } else {
+                    // Default to all days if not set
+                    document.querySelectorAll('input[name="habitDay"]').forEach(checkbox => {
+                        checkbox.checked = true;
+                    });
+                }
             }
+        } else {
+            // Default to all days for new habits
+            document.querySelectorAll('input[name="habitDay"]').forEach(checkbox => {
+                checkbox.checked = true;
+            });
         }
+
+        // Load categories
+        this.loadCategoryDropdown('habit');
 
         modal.classList.add('active');
     }
@@ -658,12 +779,17 @@ class TaskManager {
     saveHabit(e) {
         e.preventDefault();
 
+        // Get selected days
+        const selectedDays = Array.from(document.querySelectorAll('input[name="habitDay"]:checked'))
+            .map(checkbox => parseInt(checkbox.value));
+
         const habit = {
             name: document.getElementById('habitName').value,
             description: document.getElementById('habitDescription').value,
             icon: document.getElementById('habitIcon').value,
+            category: document.getElementById('habitCategory').value || null,
             points: parseInt(document.getElementById('habitPoints').value),
-            frequency: document.getElementById('habitFrequency').value
+            daysOfWeek: selectedDays.length > 0 ? selectedDays : [0, 1, 2, 3, 4, 5, 6]
         };
 
         if (this.currentEditingHabitId) {
@@ -688,13 +814,125 @@ class TaskManager {
 
     completeHabit(habitId) {
         const habit = storage.getHabits().find(h => h.id === habitId);
-        if (habit && !storage.isHabitCompletedToday(habitId)) {
-            storage.logHabitCompletion(habitId);
-            storage.addPoints(habit.points, 'habits');
-            storage.updateDailyStreak(true);
-            this.renderHabits();
-            this.renderDashboard();
+        if (habit) {
+            const today = new Date().getDay();
+            const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(today);
+            
+            if (isValidDay) {
+                storage.logHabitCompletion(habitId);
+                storage.addPoints(habit.points, 'habits');
+                storage.updateDailyStreak(true);
+                this.renderHabits();
+                this.renderDashboard();
+            }
         }
+    }
+
+    openEmojiPicker() {
+        const modal = document.getElementById('emojiModal');
+        const emojiGrid = document.getElementById('emojiGrid');
+        
+        // Clear and populate emoji grid
+        emojiGrid.innerHTML = this.emojis.map(emoji => 
+            `<button type="button" class="emoji-btn" data-emoji="${emoji}">${emoji}</button>`
+        ).join('');
+        
+        // Add event listeners to emoji buttons
+        document.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.selectEmoji(e.target.dataset.emoji);
+            });
+        });
+        
+        modal.classList.add('active');
+    }
+
+    closeEmojiPicker() {
+        document.getElementById('emojiModal').classList.remove('active');
+    }
+
+    selectEmoji(emoji) {
+        document.getElementById('habitIcon').value = emoji;
+        document.getElementById('habitIconDisplay').textContent = emoji;
+        this.closeEmojiPicker();
+    }
+
+    // ========================
+    // Category Management
+    // ========================
+    loadCategoryDropdown(type) {
+        const select = document.getElementById(`${type}Category`);
+        const categories = storage.getCategories(type);
+
+        // Preserve current selection
+        const currentValue = select.value;
+
+        // Store the special options (empty and add new)
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = 'Select category...';
+
+        const addNewOption = document.createElement('option');
+        addNewOption.value = '__add_new__';
+        addNewOption.textContent = '+ Add New Category';
+
+        // Clear and rebuild
+        select.innerHTML = '';
+        select.appendChild(emptyOption);
+
+        // Add categories
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            select.appendChild(option);
+        });
+
+        // Add the add new option at the end
+        select.appendChild(addNewOption);
+
+        // Restore selection
+        select.value = currentValue;
+    }
+
+    handleCategoryChange(type, value) {
+        const inputDiv = document.getElementById(`${type}CategoryInput`);
+        const textInput = document.getElementById(`${type}CategoryText`);
+
+        if (value === '__add_new__') {
+            inputDiv.style.display = 'block';
+            textInput.value = '';
+            textInput.focus();
+        } else {
+            inputDiv.style.display = 'none';
+        }
+    }
+
+    handleAddCategory(type) {
+        const textInput = document.getElementById(`${type}CategoryText`);
+        const categoryName = textInput.value.trim();
+
+        if (categoryName) {
+            if (storage.addCategory(type, categoryName)) {
+                this.loadCategoryDropdown(type);
+                const select = document.getElementById(`${type}Category`);
+                select.value = categoryName;
+                document.getElementById(`${type}CategoryInput`).style.display = 'none';
+                textInput.value = '';
+            } else {
+                alert('This category already exists!');
+            }
+        } else {
+            alert('Please enter a category name');
+        }
+    }
+
+    cancelAddCategory(type) {
+        document.getElementById(`${type}CategoryInput`).style.display = 'none';
+        document.getElementById(`${type}CategoryText`).value = '';
+        const select = document.getElementById(`${type}Category`);
+        select.value = '';
     }
 
     // ========================
@@ -702,7 +940,6 @@ class TaskManager {
     // ========================
     renderFinances() {
         this.updateFinanceSummary();
-        this.renderBills();
         this.renderExpenses();
         this.renderRevenue();
     }
@@ -710,21 +947,14 @@ class TaskManager {
     updateFinanceSummary() {
         const expenses = storage.getExpenses();
         const revenue = storage.getRevenue();
-        const bills = storage.getBills();
 
-        const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0) + 
-                              bills.reduce((sum, b) => sum + (b.amount || 0), 0);
+        const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
         const totalRevenue = revenue.reduce((sum, r) => sum + (r.amount || 0), 0);
         const net = totalRevenue - totalExpenses;
 
         document.getElementById('totalIncome').textContent = '$' + totalRevenue.toFixed(2);
         document.getElementById('totalExpenses').textContent = '$' + totalExpenses.toFixed(2);
         document.getElementById('netBalance').textContent = '$' + net.toFixed(2);
-    }
-
-    renderBills() {
-        const bills = storage.getBills();
-        this.renderFinanceList(bills, 'billsList', 'bill');
     }
 
     renderExpenses() {
@@ -780,17 +1010,19 @@ class TaskManager {
         deleteBtn.style.display = 'none';
         document.getElementById('financeDate').valueAsDate = new Date();
 
-        // Show/hide recurring option for bills
-        recurringGroup.style.display = type === 'bill' ? 'block' : 'none';
+        // Load categories first
+        this.loadCategoryDropdown('finance');
+
+        // Show recurring option for expenses and revenues
+        recurringGroup.style.display = ['expense', 'revenue'].includes(type) ? 'block' : 'none';
 
         // Set modal title
-        const titles = { bill: 'Add Bill', expense: 'Add Expense', revenue: 'Add Revenue' };
+        const titles = { expense: 'Add Expense', revenue: 'Add Revenue' };
         document.getElementById('financeModalTitle').textContent = financeId ? `Edit ${type}` : titles[type];
 
         if (financeId) {
             let item = null;
-            if (type === 'bill') item = storage.getBills().find(b => b.id === financeId);
-            else if (type === 'expense') item = storage.getExpenses().find(e => e.id === financeId);
+            if (type === 'expense') item = storage.getExpenses().find(e => e.id === financeId);
             else if (type === 'revenue') item = storage.getRevenue().find(r => r.id === financeId);
 
             if (item) {
@@ -798,7 +1030,7 @@ class TaskManager {
                 document.getElementById('financeAmount').value = item.amount;
                 document.getElementById('financeDate').value = item.date || '';
                 document.getElementById('financeCategory').value = item.category || '';
-                if (type === 'bill' && item.recurring) {
+                if (item.recurring) {
                     document.getElementById('financeRecurring').value = item.recurring;
                 }
                 deleteBtn.style.display = 'block';
@@ -824,15 +1056,12 @@ class TaskManager {
             category: document.getElementById('financeCategory').value
         };
 
-        if (this.currentEditingFinanceType === 'bill') {
+        // Add recurring for expenses and revenues
+        if (['expense', 'revenue'].includes(this.currentEditingFinanceType)) {
             financeItem.recurring = document.getElementById('financeRecurring').value;
+        }
 
-            if (this.currentEditingFinanceId) {
-                storage.updateBill(this.currentEditingFinanceId, financeItem);
-            } else {
-                storage.addBill(financeItem);
-            }
-        } else if (this.currentEditingFinanceType === 'expense') {
+        if (this.currentEditingFinanceType === 'expense') {
             if (this.currentEditingFinanceId) {
                 storage.updateExpense(this.currentEditingFinanceId, financeItem);
             } else {
@@ -853,9 +1082,7 @@ class TaskManager {
     deleteFinance() {
         if (this.currentEditingFinanceId) {
             if (confirm('Are you sure you want to delete this item?')) {
-                if (this.currentEditingFinanceType === 'bill') {
-                    storage.deleteBill(this.currentEditingFinanceId);
-                } else if (this.currentEditingFinanceType === 'expense') {
+                if (this.currentEditingFinanceType === 'expense') {
                     storage.deleteExpense(this.currentEditingFinanceId);
                 } else if (this.currentEditingFinanceType === 'revenue') {
                     storage.deleteRevenue(this.currentEditingFinanceId);

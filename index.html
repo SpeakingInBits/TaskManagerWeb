@@ -6,8 +6,8 @@
     <title>Task Manager</title>
     <link rel="stylesheet" href="css/styles.css">
 
-    <script src="js/storage.js"></script>
-    <script src="js/app.js"></script>
+    <script defer src="js/storage.js"></script>
+    <script defer src="js/app.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -62,10 +62,6 @@
                             <div class="overview-item">
                                 <span class="label">Habits Done</span>
                                 <span class="value" id="habitsDoneCount">0</span>
-                            </div>
-                            <div class="overview-item">
-                                <span class="label">Bills Due</span>
-                                <span class="value" id="billsDueCount">0</span>
                             </div>
                         </div>
                     </div>
@@ -162,7 +158,17 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="taskCategory">Category</label>
-                                    <input type="text" id="taskCategory" placeholder="e.g., Work">
+                                    <select id="taskCategory">
+                                        <option value="">Select category...</option>
+                                        <option value="__add_new__">+ Add New Category</option>
+                                    </select>
+                                    <div id="taskCategoryInput" style="display: none; margin-top: 0.5rem;">
+                                        <input type="text" id="taskCategoryText" placeholder="Enter new category name">
+                                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                            <button type="button" class="btn btn-secondary" id="taskCategorySave">Add</button>
+                                            <button type="button" class="btn btn-secondary" id="taskCategoryCancel">Cancel</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="form-row">
@@ -190,6 +196,25 @@
                                     <option value="custom">Custom Days</option>
                                     <option value="movable">Movable (From Completion)</option>
                                 </select>
+                            </div>
+                            <div class="form-group" id="repeatUnitGroup" style="display: none;">
+                                <label for="taskRepeatUnit">Repeat Every</label>
+                                <div class="repeat-unit-input">
+                                    <input type="number" id="taskRepeatUnit" min="1" value="1">
+                                    <span id="repeatUnitLabel">week(s)</span>
+                                </div>
+                            </div>
+                            <div class="form-group" id="taskDaysGroup" style="display: none;">
+                                <label>Days of Week</label>
+                                <div class="days-selector">
+                                    <label class="day-checkbox"><input type="checkbox" name="taskDay" value="0"> Sunday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="taskDay" value="1"> Monday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="taskDay" value="2"> Tuesday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="taskDay" value="3"> Wednesday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="taskDay" value="4"> Thursday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="taskDay" value="5"> Friday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="taskDay" value="6"> Saturday</label>
+                                </div>
                             </div>
                             <div class="form-group" id="customRepeatGroup" style="display: none;">
                                 <label for="customRepeatDays">Repeat Every (Days)</label>
@@ -297,20 +322,37 @@
                             </div>
                             <div class="form-group">
                                 <label for="habitIcon">Icon/Emoji</label>
-                                <input type="text" id="habitIcon" placeholder="e.g., 💪" value="⭐">
+                                <div class="emoji-selector">
+                                    <input type="hidden" id="habitIcon" value="⭐">
+                                    <div class="emoji-display" id="habitIconDisplay">⭐</div>
+                                    <button type="button" class="btn btn-secondary" id="habitEmojiBtn">Choose Emoji</button>
+                                </div>
                             </div>
                             <div class="form-group">
-                                <label for="habitPoints">Points per Completion</label>
-                                <input type="number" id="habitPoints" min="1" value="5">
-                            </div>
-                            <div class="form-group">
-                                <label for="habitFrequency">Frequency</label>
-                                <select id="habitFrequency">
-                                    <option value="daily">Daily</option>
-                                    <option value="weekdays">Weekdays Only</option>
-                                    <option value="weekends">Weekends Only</option>
-                                    <option value="custom">Custom Days</option>
+                                <label for="habitCategory">Category</label>
+                                <select id="habitCategory">
+                                    <option value="">Select category...</option>
+                                    <option value="__add_new__">+ Add New Category</option>
                                 </select>
+                                <div id="habitCategoryInput" style="display: none; margin-top: 0.5rem;">
+                                    <input type="text" id="habitCategoryText" placeholder="Enter new category name">
+                                    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                        <button type="button" class="btn btn-secondary" id="habitCategorySave">Add</button>
+                                        <button type="button" class="btn btn-secondary" id="habitCategoryCancel">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Days of Week</label>
+                                <div class="days-selector">
+                                    <label class="day-checkbox"><input type="checkbox" name="habitDay" value="0"> Sunday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="habitDay" value="1"> Monday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="habitDay" value="2"> Tuesday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="habitDay" value="3"> Wednesday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="habitDay" value="4"> Thursday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="habitDay" value="5"> Friday</label>
+                                    <label class="day-checkbox"><input type="checkbox" name="habitDay" value="6"> Saturday</label>
+                                </div>
                             </div>
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">Save Habit</button>
@@ -318,6 +360,19 @@
                                 <button type="button" class="btn btn-secondary" id="cancelHabitBtn">Cancel</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+
+                <!-- Emoji Picker Modal -->
+                <div class="modal" id="emojiModal">
+                    <div class="modal-content emoji-picker-modal">
+                        <div class="modal-header">
+                            <h3>Choose Emoji</h3>
+                            <button class="close-btn" id="closeEmojiBtn">&times;</button>
+                        </div>
+                        <div class="emoji-grid" id="emojiGrid">
+                            <!-- Emojis will be populated by JavaScript -->
+                        </div>
                     </div>
                 </div>
             </section>
@@ -328,7 +383,6 @@
                     <div class="finances-header">
                         <h2>Finances</h2>
                         <div class="finance-buttons">
-                            <button class="btn btn-success" id="addBillBtn">+ Add Bill</button>
                             <button class="btn btn-success" id="addExpenseBtn">+ Add Expense</button>
                             <button class="btn btn-success" id="addRevenueBtn">+ Add Revenue</button>
                         </div>
@@ -350,22 +404,14 @@
                         </div>
                     </div>
 
-                    <!-- Tabs for Bills, Expenses, Revenue -->
+                    <!-- Tabs for Expenses, Revenue -->
                     <div class="finance-tabs">
-                        <button class="finance-tab active" data-finance-tab="bills">Bills</button>
-                        <button class="finance-tab" data-finance-tab="expenses">Expenses</button>
+                        <button class="finance-tab active" data-finance-tab="expenses">Expenses</button>
                         <button class="finance-tab" data-finance-tab="revenue">Revenue</button>
                     </div>
 
-                    <!-- Bills List -->
-                    <div class="finance-content active" id="bills-content">
-                        <div class="finance-list" id="billsList">
-                            <p class="empty-state">No bills. Add one to track recurring payments!</p>
-                        </div>
-                    </div>
-
                     <!-- Expenses List -->
-                    <div class="finance-content" id="expenses-content">
+                    <div class="finance-content active" id="expenses-content">
                         <div class="finance-list" id="expensesList">
                             <p class="empty-state">No expenses. Add one to track spending!</p>
                         </div>
@@ -409,7 +455,17 @@
                             </div>
                             <div class="form-group">
                                 <label for="financeCategory">Category</label>
-                                <input type="text" id="financeCategory">
+                                <select id="financeCategory">
+                                    <option value="">Select category...</option>
+                                    <option value="__add_new__">+ Add New Category</option>
+                                </select>
+                                <div id="financeCategoryInput" style="display: none; margin-top: 0.5rem;">
+                                    <input type="text" id="financeCategoryText" placeholder="Enter new category name">
+                                    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                        <button type="button" class="btn btn-secondary" id="financeCategorySave">Add</button>
+                                        <button type="button" class="btn btn-secondary" id="financeCategoryCancel">Cancel</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">Save</button>
