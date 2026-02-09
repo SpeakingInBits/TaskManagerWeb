@@ -310,6 +310,7 @@ class StorageManager {
         reward.id = this.generateId();
         reward.createdDate = new Date().toISOString();
         reward.purchased = false;
+        reward.repeatable = typeof reward.repeatable === 'undefined' ? true : reward.repeatable;
         data.rewards.push(reward);
         this.saveData(data);
         return reward;
@@ -323,6 +324,7 @@ class StorageManager {
         const reward = data.rewards.find(r => r.id === rewardId);
         if (reward) {
             Object.assign(reward, updates);
+            if (typeof reward.repeatable === 'undefined') reward.repeatable = true;
             this.saveData(data);
         }
         return reward;
@@ -358,6 +360,14 @@ class StorageManager {
         
         if (data.userStats.totalPoints < reward.cost) {
             return { success: false, message: 'Not enough points' };
+        }
+        
+        // If one-time and already purchased, block
+        if (reward.repeatable === false) {
+            const alreadyPurchased = data.purchaseHistory.some(ph => ph.rewardId === reward.id);
+            if (alreadyPurchased) {
+                return { success: false, message: 'This reward can only be purchased once.' };
+            }
         }
         
         // Deduct points

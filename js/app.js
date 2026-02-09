@@ -1298,24 +1298,40 @@ class TaskManager {
             return;
         }
 
-        container.innerHTML = rewards.map(reward => `
-            <div class="project-card blue" style="cursor: pointer;" data-reward-id="${reward.id}">
-                <div class="project-title">${reward.name}</div>
-                ${reward.description ? `<div class="project-description">${reward.description}</div>` : ''}
-                <div class="project-stats">
-                    <div class="project-stat">
-                        <span class="project-stat-label">Cost</span>
-                        <span class="project-stat-value">${reward.cost} pts</span>
+        container.innerHTML = rewards.map(reward => {
+            // Check if one-time and already purchased
+            let alreadyPurchased = false;
+            if (reward.repeatable === false) {
+                const purchaseHistory = storage.getData().purchaseHistory || [];
+                alreadyPurchased = purchaseHistory.some(ph => ph.rewardId === reward.id);
+            }
+            const disabled = userStats.totalPoints < reward.cost || alreadyPurchased;
+            let purchaseLabel = 'Purchase';
+            if (userStats.totalPoints < reward.cost) purchaseLabel = 'Not Enough Points';
+            if (alreadyPurchased) purchaseLabel = 'Purchased';
+
+            return `
+                <div class="project-card blue" style="cursor: pointer;" data-reward-id="${reward.id}">
+                    <div class="project-title">${reward.name}</div>
+                    ${reward.description ? `<div class="project-description">${reward.description}</div>` : ''}
+                    <div class="project-stats">
+                        <div class="project-stat">
+                            <span class="project-stat-label">Cost</span>
+                            <span class="project-stat-value">${reward.cost} pts</span>
+                        </div>
+                        <div class="project-stat">
+                            <span class="project-stat-label">${reward.repeatable === false ? 'One-time' : 'Repeatable'}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary purchase-btn" style="flex: 1;" ${disabled ? 'disabled' : ''}>
+                            ${purchaseLabel}
+                        </button>
+                        <button class="btn btn-secondary edit-reward-btn">Edit</button>
                     </div>
                 </div>
-                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                    <button class="btn btn-primary purchase-btn" style="flex: 1;" ${userStats.totalPoints < reward.cost ? 'disabled' : ''}>
-                        ${userStats.totalPoints < reward.cost ? 'Not Enough Points' : 'Purchase'}
-                    </button>
-                    <button class="btn btn-secondary edit-reward-btn">Edit</button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         // Add event listeners
         document.querySelectorAll('.purchase-btn').forEach((btn, index) => {
@@ -1352,6 +1368,7 @@ class TaskManager {
                 document.getElementById('rewardName').value = reward.name;
                 document.getElementById('rewardDescription').value = reward.description || '';
                 document.getElementById('rewardCost').value = reward.cost;
+                document.getElementById('rewardRepeatable').value = String(reward.repeatable === undefined ? true : reward.repeatable);
                 deleteBtn.style.display = 'block';
             }
         }
@@ -1370,7 +1387,8 @@ class TaskManager {
         const reward = {
             name: document.getElementById('rewardName').value,
             description: document.getElementById('rewardDescription').value,
-            cost: parseInt(document.getElementById('rewardCost').value)
+            cost: parseInt(document.getElementById('rewardCost').value),
+            repeatable: document.getElementById('rewardRepeatable').value === 'true'
         };
 
         if (this.currentEditingRewardId) {
