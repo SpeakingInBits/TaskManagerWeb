@@ -33,6 +33,7 @@
                     <div class="stat">
                         <span class="stat-label">Level</span>
                         <span class="stat-value" id="userLevel">1</span>
+                        <span class="stat-sublabel" id="levelProgress" style="font-size: 0.7rem; color: #ccc; display: block; margin-top: -2px;">0/30 tasks</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Streak</span>
@@ -599,6 +600,30 @@
             <section class="tab-content" id="settings-tab">
                 <div class="settings-container">
                     <h2>Settings</h2>
+                    
+                    <div class="settings-section">
+                        <h3>Leveling System</h3>
+                        <div class="setting-item">
+                            <label for="tasksPerLevel">Tasks per Level</label>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <input type="number" id="tasksPerLevel" min="1" max="100" value="30" style="width: 100px; padding: 0.5rem;">
+                                <button class="btn btn-primary" id="saveTasksPerLevel">Save</button>
+                            </div>
+                            <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #666;">Number of completed tasks required to reach the next level (default: 30)</p>
+                        </div>
+                        <div class="setting-item" style="background: #f9f9f9; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0;">Current Status</h4>
+                            <p style="margin: 0.25rem 0; font-size: 0.9rem;">
+                                <strong>Current Level:</strong> <span id="settingsCurrentLevel">1</span>
+                            </p>
+                            <p style="margin: 0.25rem 0; font-size: 0.9rem;">
+                                <strong>Total Completed Tasks:</strong> <span id="settingsTotalCompleted">0</span>
+                            </p>
+                            <p style="margin: 0.25rem 0; font-size: 0.9rem;">
+                                <strong>Tasks to Next Level:</strong> <span id="settingsTasksToNext">30</span>
+                            </p>
+                        </div>
+                    </div>
                     
                     <div class="settings-section">
                         <h3>Data Management</h3>

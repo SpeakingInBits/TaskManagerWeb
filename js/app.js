@@ -117,6 +117,7 @@ class TaskManager {
         });
 
         // Settings
+        document.getElementById('saveTasksPerLevel').addEventListener('click', () => this.saveTasksPerLevel());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
         document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
         document.getElementById('importFile').addEventListener('change', (e) => this.importData(e));
@@ -199,6 +200,8 @@ class TaskManager {
             this.renderFinances();
         } else if (tabName === 'shop') {
             this.renderShop();
+        } else if (tabName === 'settings') {
+            this.renderSettings();
         }
     }
 
@@ -232,6 +235,13 @@ class TaskManager {
         document.getElementById('totalPoints').textContent = userStats.totalPoints;
         document.getElementById('userLevel').textContent = userStats.level;
         document.getElementById('dailyStreak').textContent = userStats.dailyStreak;
+        
+        // Update level progress
+        const settings = storage.getSettings();
+        const completedTasksCount = tasks.filter(t => t.completed).length;
+        const tasksInCurrentLevel = completedTasksCount % settings.tasksPerLevel;
+        const tasksNeeded = settings.tasksPerLevel;
+        document.getElementById('levelProgress').textContent = `${tasksInCurrentLevel}/${tasksNeeded} tasks`;
 
         // Today's overview
         const todayTasks = tasks.filter(t => t.dueDate === today && !t.completed);
@@ -625,8 +635,12 @@ class TaskManager {
                 task.completedDate = storage.formatDate(new Date());
                 storage.addPoints(task.points, 'tasks');
                 storage.updateDailyStreak(true);
+            } else {
+                // If uncompleting, also recalculate level
+                task.completedDate = null;
             }
             storage.updateTask(taskId, task);
+            storage.updateLevel(); // Recalculate level based on completed tasks
             this.renderTasks();
             this.renderDashboard();
             this.renderProjects();
@@ -1477,6 +1491,50 @@ class TaskManager {
     // ========================
     // Settings
     // ========================
+    renderSettings() {
+        this.loadSettings();
+        this.updateSettingsStatus();
+    }
+
+    loadSettings() {
+        const settings = storage.getSettings();
+        const tasksPerLevelInput = document.getElementById('tasksPerLevel');
+        if (tasksPerLevelInput) {
+            tasksPerLevelInput.value = settings.tasksPerLevel || 30;
+        }
+    }
+
+    updateSettingsStatus() {
+        const settings = storage.getSettings();
+        const tasks = storage.getTasks();
+        const completedTasksCount = tasks.filter(t => t.completed).length;
+        const userStats = storage.getUserStats();
+        const tasksInCurrentLevel = completedTasksCount % settings.tasksPerLevel;
+        const tasksToNext = settings.tasksPerLevel - tasksInCurrentLevel;
+
+        const currentLevelEl = document.getElementById('settingsCurrentLevel');
+        const totalCompletedEl = document.getElementById('settingsTotalCompleted');
+        const tasksToNextEl = document.getElementById('settingsTasksToNext');
+
+        if (currentLevelEl) currentLevelEl.textContent = userStats.level;
+        if (totalCompletedEl) totalCompletedEl.textContent = completedTasksCount;
+        if (tasksToNextEl) tasksToNextEl.textContent = tasksToNext;
+    }
+
+    saveTasksPerLevel() {
+        const tasksPerLevel = parseInt(document.getElementById('tasksPerLevel').value);
+        
+        if (isNaN(tasksPerLevel) || tasksPerLevel < 1) {
+            alert('Please enter a valid number (minimum 1)');
+            return;
+        }
+
+        storage.updateSettings({ tasksPerLevel });
+        alert('Settings saved! Level has been recalculated.');
+        this.updateSettingsStatus();
+        this.renderDashboard(); // Update the display with new level
+    }
+
     exportData() {
         const data = storage.exportData();
         const blob = new Blob([data], { type: 'application/json' });

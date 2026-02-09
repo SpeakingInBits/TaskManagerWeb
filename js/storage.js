@@ -48,6 +48,9 @@ class StorageManager {
                     habits: 0,
                     streakBonus: 0
                 }
+            },
+            settings: {
+                tasksPerLevel: 30
             }
         };
 
@@ -404,8 +407,16 @@ class StorageManager {
         if (data.userStats.pointsBreakdown[source]) {
             data.userStats.pointsBreakdown[source] += amount;
         }
-        data.userStats.level = Math.floor(data.userStats.totalPoints / 100) + 1;
+        // Level is now calculated based on completed tasks, not points
+        this.updateLevel();
         this.saveData(data);
+    }
+
+    updateLevel() {
+        const data = this.getData();
+        const settings = this.getSettings();
+        const completedTasksCount = data.tasks.filter(t => t.completed).length;
+        data.userStats.level = Math.floor(completedTasksCount / settings.tasksPerLevel) + 1;
     }
 
     updateDailyStreak(increment = true) {
@@ -499,7 +510,32 @@ class StorageManager {
         }
         return false;
     }
-}
 
+    // ========================
+    // Settings Management
+    // ========================
+    getSettings() {
+        const data = this.getData();
+        // Ensure settings exist with defaults
+        if (!data.settings) {
+            data.settings = {
+                tasksPerLevel: 30
+            };
+            this.saveData(data);
+        }
+        return data.settings;
+    }
+
+    updateSettings(settings) {
+        const data = this.getData();
+        if (!data.settings) {
+            data.settings = {};
+        }
+        Object.assign(data.settings, settings);
+        // Recalculate level with new settings
+        this.updateLevel();
+        this.saveData(data);
+    }
+}
 // Initialize global storage manager
 const storage = new StorageManager();
