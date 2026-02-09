@@ -236,17 +236,50 @@ class TaskManager {
         // Today's overview
         const todayTasks = tasks.filter(t => t.dueDate === today && !t.completed);
         const completedToday = tasks.filter(t => t.completedDate === today);
-        const habitsDone = logs.filter(log => log.date === today).length;
+        const todayDay = new Date().getDay();
+        
+        // Find incomplete habits for today
+        const incompleteHabits = habits.filter(habit => {
+            const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(todayDay);
+            if (!isValidDay) return false;
+            const todaysCompletions = storage.countHabitCompletionsToday(habit.id);
+            const targetGoal = habit.targetGoal || 1;
+            return todaysCompletions < targetGoal;
+        });
 
         document.getElementById('todayTasksCount').textContent = todayTasks.length;
         document.getElementById('completedTodayCount').textContent = completedToday.length;
-        document.getElementById('habitsDoneCount').textContent = habitsDone;
-
-        // Points breakdown
-        document.getElementById('tasksPoints').textContent = userStats.pointsBreakdown.tasks;
-        document.getElementById('projectsPoints').textContent = userStats.pointsBreakdown.projects;
-        document.getElementById('habitsPoints').textContent = userStats.pointsBreakdown.habits;
-        document.getElementById('streakBonus').textContent = userStats.pointsBreakdown.streakBonus;
+        document.getElementById('incompleteHabitsCount').textContent = incompleteHabits.length;
+        
+        // Render incomplete habits list
+        const incompleteHabitsList = document.getElementById('incompleteHabitsList');
+        if (incompleteHabits.length === 0) {
+            incompleteHabitsList.innerHTML = '<p class="empty-state" style="margin: 0.5rem 0;">All habits completed for today! 🎉</p>';
+        } else {
+            incompleteHabitsList.innerHTML = incompleteHabits.map(habit => {
+                const todaysCompletions = storage.countHabitCompletionsToday(habit.id);
+                const targetGoal = habit.targetGoal || 1;
+                const percentage = Math.min(100, Math.round((todaysCompletions / targetGoal) * 100));
+                return `
+                    <div class="habit-item" style="padding: 0.5rem; border-left: 3px solid #4CAF50; margin-bottom: 0.5rem; background: #f9f9f9; cursor: pointer;" data-habit-id="${habit.id}">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <span style="font-size: 1.2rem; margin-right: 0.5rem;">${habit.icon}</span>
+                                <span style="font-weight: 500;">${habit.name}</span>
+                            </div>
+                            <span style="font-size: 0.85rem; color: #666;">${todaysCompletions}/${targetGoal} (${percentage}%)</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add click handlers to navigate to habits
+            document.querySelectorAll('.habit-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    this.switchTab('habits');
+                });
+            });
+        }
 
         // Recent activity
         this.renderRecentActivity();
@@ -824,6 +857,9 @@ class TaskManager {
         
         // Count completions today
         const todaysCompletions = storage.countHabitCompletionsToday(habit.id);
+        const targetGoal = habit.targetGoal || 1;
+        const percentage = Math.min(100, Math.round((todaysCompletions / targetGoal) * 100));
+        const isComplete = todaysCompletions >= targetGoal;
 
         return `
             <div class="habit-card" data-habit-id="${habit.id}">
@@ -840,12 +876,20 @@ class TaskManager {
                         <span class="habit-stat-value">${habit.points}</span>
                     </div>
                     <div class="habit-stat">
-                        <span class="habit-stat-label">Today</span>
-                        <span class="habit-stat-value">${todaysCompletions || 0}</span>
+                        <span class="habit-stat-label">Progress</span>
+                        <span class="habit-stat-value">${todaysCompletions}/${targetGoal}</span>
                     </div>
                 </div>
-                <button class="habit-checkbox ${!isValidDay ? 'disabled' : ''}" data-habit-id="${habit.id}" ${!isValidDay ? 'disabled' : ''}>
-                    ${!isValidDay ? '✗ Not Today' : '+ Complete'}
+                <div style="margin-top: 0.5rem;">
+                    <div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
+                        <div style="background: ${isComplete ? '#4CAF50' : '#2196F3'}; height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
+                    </div>
+                    <div style="text-align: center; font-size: 0.9rem; color: ${isComplete ? '#4CAF50' : '#666'}; margin-bottom: 0.5rem;">
+                        ${isComplete ? '✓ Complete!' : `${percentage}% Complete`}
+                    </div>
+                </div>
+                <button class="habit-checkbox ${!isValidDay || isComplete ? 'disabled' : ''}" data-habit-id="${habit.id}" ${!isValidDay || isComplete ? 'disabled' : ''}>
+                    ${!isValidDay ? '✗ Not Today' : isComplete ? '✓ Done for Today' : '+ Complete'}
                 </button>
             </div>
         `;
@@ -876,6 +920,7 @@ class TaskManager {
                 document.getElementById('habitIconDisplay').textContent = habit.icon || '⭐';
                 document.getElementById('habitCategory').value = habit.category || '';
                 document.getElementById('habitPoints').value = habit.points || 5;
+                document.getElementById('habitTargetGoal').value = habit.targetGoal || 1;
                 deleteBtn.style.display = 'block';
                 
                 // Load daysOfWeek if available
@@ -924,6 +969,7 @@ class TaskManager {
             icon: document.getElementById('habitIcon').value,
             category: document.getElementById('habitCategory').value || null,
             points: parseInt(document.getElementById('habitPoints').value),
+            targetGoal: parseInt(document.getElementById('habitTargetGoal').value) || 1,
             daysOfWeek: selectedDays.length > 0 ? selectedDays : [0, 1, 2, 3, 4, 5, 6]
         };
 

@@ -141,6 +141,7 @@ class StorageManager {
         habit.createdDate = new Date().toISOString();
         habit.streak = 0;
         habit.lastCompletedDate = null;
+        habit.targetGoal = habit.targetGoal || 1;
         data.habits.push(habit);
         this.saveData(data);
         return habit;
@@ -151,6 +152,7 @@ class StorageManager {
         const habit = data.habits.find(h => h.id === habitId);
         if (habit) {
             Object.assign(habit, updates);
+            if (!habit.targetGoal) habit.targetGoal = 1;
             this.saveData(data);
         }
         return habit;

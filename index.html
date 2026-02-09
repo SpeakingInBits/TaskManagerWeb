@@ -76,32 +76,12 @@
                                 <span class="value" id="completedTodayCount">0</span>
                             </div>
                             <div class="overview-item">
-                                <span class="label">Habits Done</span>
-                                <span class="value" id="habitsDoneCount">0</span>
+                                <span class="label">Incomplete Habits</span>
+                                <span class="value" id="incompleteHabitsCount">0</span>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Points Breakdown -->
-                    <div class="card dashboard-card">
-                        <h2>Points Breakdown</h2>
-                        <div class="points-breakdown">
-                            <div class="breakdown-item">
-                                <span class="label">Tasks</span>
-                                <span class="value" id="tasksPoints">0</span>
-                            </div>
-                            <div class="breakdown-item">
-                                <span class="label">Projects</span>
-                                <span class="value" id="projectsPoints">0</span>
-                            </div>
-                            <div class="breakdown-item">
-                                <span class="label">Habits</span>
-                                <span class="value" id="habitsPoints">0</span>
-                            </div>
-                            <div class="breakdown-item">
-                                <span class="label">Streak Bonus</span>
-                                <span class="value" id="streakBonus">0</span>
-                            </div>
+                        <div class="incomplete-habits-list" id="incompleteHabitsList" style="margin-top: 1rem;">
+                            <!-- Incomplete habits will be populated here -->
                         </div>
                     </div>
 
@@ -399,6 +379,11 @@
                             <div class="form-group">
                                 <label for="habitPoints">Points Value</label>
                                 <input type="number" id="habitPoints" min="1" value="10">
+                            </div>
+                            <div class="form-group">
+                                <label for="habitTargetGoal">Daily Target Goal</label>
+                                <input type="number" id="habitTargetGoal" min="1" value="1" placeholder="e.g., 10 for 10 push-ups">
+                                <small style="color: #666; font-size: 0.85rem;">How many times should this habit be completed per day?</small>
                             </div>
                             <div class="form-group">
                                 <label>Days of Week</label>
