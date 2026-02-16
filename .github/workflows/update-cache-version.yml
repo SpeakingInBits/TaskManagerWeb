@@ -1,0 +1,44 @@
+name: Update Service Worker Cache Version
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'css/**'
+      - 'js/**'
+      - 'manifest.json'
+
+jobs:
+  update-cache:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update cache name with commit hash
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          sed -i "s/const CACHE_NAME = 'task-manager-v[^']*';/const CACHE_NAME = 'task-manager-v${COMMIT_HASH}';/" service-worker.js
+          
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet service-worker.js; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push if changed
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add service-worker.js
+          git commit -m "chore: update service worker cache version to $(git rev-parse --short HEAD)"
+          git push
