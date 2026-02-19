@@ -11,6 +11,7 @@ class TaskManager {
         this.currentEditingFinanceType = null;
         this.currentEditingRewardId = null;
         this.currentEditingFinanceType = null;
+        this.selectedDate = new Date();
         this.emojis = [
             // Activity
             '💪', '🏃', '🚴', '🏊', '🧘', '💃', '🕺', '⛹️',
@@ -39,6 +40,7 @@ class TaskManager {
     init() {
         this.setupEventListeners();
         this.initializeFinanceDateFilter();
+        this.updateDateNavigator();
         this.render();
         this.processRecurringTasks();
     }
@@ -167,6 +169,15 @@ class TaskManager {
                 }
             }
         });
+
+        // Date navigator
+        document.getElementById('prevDayBtn').addEventListener('click', () => this.navigateDate(-1));
+        document.getElementById('nextDayBtn').addEventListener('click', () => this.navigateDate(1));
+        document.getElementById('goTodayBtn').addEventListener('click', () => {
+            this.selectedDate = new Date();
+            this.updateDateNavigator();
+            this.render();
+        });
     }
 
     // ========================
@@ -222,7 +233,7 @@ class TaskManager {
     // Dashboard Rendering
     // ========================
     renderDashboard() {
-        const today = storage.formatDate(new Date());
+        const today = this.getSelectedDateStr();
         const tasks = storage.getTasks();
         const projects = storage.getProjects();
         const habits = storage.getHabits();
@@ -243,16 +254,16 @@ class TaskManager {
         const tasksNeeded = settings.tasksPerLevel;
         document.getElementById('levelProgress').textContent = `${tasksInCurrentLevel}/${tasksNeeded} tasks`;
 
-        // Today's overview
+        // Selected day's overview
         const todayTasks = tasks.filter(t => t.dueDate === today && !t.completed);
         const completedToday = tasks.filter(t => t.completedDate === today);
-        const todayDay = new Date().getDay();
+        const todayDay = this.selectedDate.getDay();
         
-        // Find incomplete habits for today
+        // Find incomplete habits for selected day
         const incompleteHabits = habits.filter(habit => {
             const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(todayDay);
             if (!isValidDay) return false;
-            const todaysCompletions = storage.countHabitCompletionsToday(habit.id);
+            const todaysCompletions = storage.countHabitCompletionsForDate(habit.id, today);
             const targetGoal = habit.targetGoal || 1;
             return todaysCompletions < targetGoal;
         });
@@ -267,7 +278,7 @@ class TaskManager {
             incompleteHabitsList.innerHTML = '<p class="empty-state" style="margin: 0.5rem 0;">All habits completed for today! 🎉</p>';
         } else {
             incompleteHabitsList.innerHTML = incompleteHabits.map(habit => {
-                const todaysCompletions = storage.countHabitCompletionsToday(habit.id);
+                const todaysCompletions = storage.countHabitCompletionsForDate(habit.id, today);
                 const targetGoal = habit.targetGoal || 1;
                 const percentage = Math.min(100, Math.round((todaysCompletions / targetGoal) * 100));
                 return `
@@ -383,7 +394,7 @@ class TaskManager {
         const categoryFilter = document.getElementById('categoryFilter').value;
         const statusFilter = document.getElementById('statusFilter').value;
         const searchTerm = document.getElementById('searchTasks').value.toLowerCase();
-        const today = storage.formatDate(new Date());
+        const today = this.getSelectedDateStr();
 
         let filtered = tasks.filter(task => {
             // Category filter
@@ -632,7 +643,7 @@ class TaskManager {
         if (task) {
             task.completed = !task.completed;
             if (task.completed) {
-                task.completedDate = storage.formatDate(new Date());
+                task.completedDate = this.getSelectedDateStr();
                 storage.addPoints(task.points, 'tasks');
                 storage.updateDailyStreak(true);
             } else {
@@ -866,14 +877,22 @@ class TaskManager {
     }
 
     renderHabitCard(habit) {
-        const today = new Date().getDay();
-        const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(today);
+        const selectedDayOfWeek = this.selectedDate.getDay();
+        const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(selectedDayOfWeek);
+        const selectedDateStr = this.getSelectedDateStr();
+        const isPastDay = !this.isSelectedDateToday();
         
-        // Count completions today
-        const todaysCompletions = storage.countHabitCompletionsToday(habit.id);
+        // Count completions for the selected date
+        const todaysCompletions = storage.countHabitCompletionsForDate(habit.id, selectedDateStr);
         const targetGoal = habit.targetGoal || 1;
         const percentage = Math.min(100, Math.round((todaysCompletions / targetGoal) * 100));
         const isComplete = todaysCompletions >= targetGoal;
+
+        const btnLabel = !isValidDay
+            ? '✗ Not Scheduled'
+            : isComplete
+                ? (isPastDay ? '✓ Logged' : '✓ Done for Today')
+                : (isPastDay ? '+ Log Past Day' : '+ Complete');
 
         return `
             <div class="habit-card" data-habit-id="${habit.id}">
@@ -903,7 +922,7 @@ class TaskManager {
                     </div>
                 </div>
                 <button class="habit-checkbox ${!isValidDay || isComplete ? 'disabled' : ''}" data-habit-id="${habit.id}" ${!isValidDay || isComplete ? 'disabled' : ''}>
-                    ${!isValidDay ? '✗ Not Today' : isComplete ? '✓ Done for Today' : '+ Complete'}
+                    ${btnLabel}
                 </button>
             </div>
         `;
@@ -1010,11 +1029,11 @@ class TaskManager {
     completeHabit(habitId) {
         const habit = storage.getHabits().find(h => h.id === habitId);
         if (habit) {
-            const today = new Date().getDay();
-            const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(today);
+            const selectedDayOfWeek = this.selectedDate.getDay();
+            const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(selectedDayOfWeek);
             
             if (isValidDay) {
-                storage.logHabitCompletion(habitId);
+                storage.logHabitCompletion(habitId, this.selectedDate);
                 storage.addPoints(habit.points, 'habits');
                 storage.updateDailyStreak(true);
                 this.renderHabits();
@@ -1636,8 +1655,71 @@ class TaskManager {
         document.getElementById('dataVersion').textContent = STORAGE_VERSION;
         const lastUpdated = storage.getData().lastUpdated;
         document.getElementById('lastUpdated').textContent = lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Never';
-        
+
+        this.updateDateNavigator();
         this.renderDashboard();
+    }
+
+    // ========================
+    // Date Navigation
+    // ========================
+    getSelectedDateStr() {
+        return storage.formatDate(this.selectedDate);
+    }
+
+    isSelectedDateToday() {
+        return this.getSelectedDateStr() === storage.formatDate(new Date());
+    }
+
+    navigateDate(delta) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const minDate = new Date(today);
+        minDate.setDate(minDate.getDate() - 6);
+
+        const newDate = new Date(this.selectedDate);
+        newDate.setDate(newDate.getDate() + delta);
+        newDate.setHours(0, 0, 0, 0);
+
+        if (newDate >= minDate && newDate <= today) {
+            this.selectedDate = newDate;
+            this.updateDateNavigator();
+            // Re-render the active tab
+            const activeTab = document.querySelector('.nav-tab.active');
+            if (activeTab) {
+                this.switchTab(activeTab.dataset.tab);
+            } else {
+                this.renderDashboard();
+            }
+        }
+    }
+
+    formatDisplayDate(date) {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+    }
+
+    updateDateNavigator() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const minDate = new Date(today);
+        minDate.setDate(minDate.getDate() - 6);
+
+        const sel = new Date(this.selectedDate);
+        sel.setHours(0, 0, 0, 0);
+
+        const isToday = sel.getTime() === today.getTime();
+        const isPastLimit = sel.getTime() <= minDate.getTime();
+
+        const displayStr = isToday
+            ? `Today — ${this.formatDisplayDate(this.selectedDate)}`
+            : this.formatDisplayDate(this.selectedDate);
+
+        document.getElementById('selectedDateDisplay').textContent = displayStr;
+        document.getElementById('prevDayBtn').disabled = isPastLimit;
+        document.getElementById('nextDayBtn').disabled = isToday;
+        document.getElementById('goTodayBtn').style.display = isToday ? 'none' : 'inline-block';
     }
 }
 

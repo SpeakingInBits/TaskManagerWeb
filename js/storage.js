@@ -205,6 +205,11 @@ class StorageManager {
         return data.dailyHabitLogs.filter(log => log.habitId === habitId && log.date === todayStr).length;
     }
 
+    countHabitCompletionsForDate(habitId, dateStr) {
+        const data = this.getData();
+        return data.dailyHabitLogs.filter(log => log.habitId === habitId && log.date === dateStr).length;
+    }
+
     // Finance Management
     addExpense(expense) {
         const data = this.getData();
