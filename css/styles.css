@@ -948,6 +948,12 @@ html, body {
     text-align: right;
 }
 
+.finance-item-amount .monthly-label {
+    font-size: 0.75em;
+    font-weight: 400;
+    opacity: 0.75;
+}
+
 .finance-item-amount.income {
     color: var(--secondary-color);
     font-weight: 700;

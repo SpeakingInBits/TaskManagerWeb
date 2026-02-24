@@ -1176,17 +1176,27 @@ class TaskManager {
         const { startDate, endDate } = this.getFinanceDateRange();
         
         if (!startDate && !endDate) {
-            return items;
+            return items.map(item => ({ ...item, monthlyAmount: item.amount }));
         }
 
         return items.filter(item => {
             if (!item.date) return false;
-            
+
+            // Recurring items apply to every period on or after their start date
+            if (item.recurring === 'yearly' || item.recurring === 'monthly') {
+                if (endDate && item.date > endDate) return false;
+                return true;
+            }
+
+            // One-time items: only include if date falls within the range
             if (startDate && item.date < startDate) return false;
             if (endDate && item.date > endDate) return false;
-            
+
             return true;
-        });
+        }).map(item => ({
+            ...item,
+            monthlyAmount: item.recurring === 'yearly' ? item.amount / 12 : item.amount
+        }));
     }
 
     renderFinances() {
@@ -1201,9 +1211,9 @@ class TaskManager {
         const revenue = this.filterFinanceItemsByDate(storage.getRevenue());
         const charges = this.filterFinanceItemsByDate(storage.getCharges());
 
-        const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-        const totalCharges = charges.reduce((sum, c) => sum + (c.amount || 0), 0);
-        const totalRevenue = revenue.reduce((sum, r) => sum + (r.amount || 0), 0);
+        const totalExpenses = expenses.reduce((sum, e) => sum + (e.monthlyAmount || 0), 0);
+        const totalCharges = charges.reduce((sum, c) => sum + (c.monthlyAmount || 0), 0);
+        const totalRevenue = revenue.reduce((sum, r) => sum + (r.monthlyAmount || 0), 0);
         const net = totalRevenue - totalExpenses - totalCharges;
 
         document.getElementById('totalIncome').textContent = '$' + totalRevenue.toFixed(2);
@@ -1234,7 +1244,10 @@ class TaskManager {
             return;
         }
 
-        container.innerHTML = items.map(item => `
+        container.innerHTML = items.map(item => {
+            const displayAmount = (item.monthlyAmount !== undefined ? item.monthlyAmount : item.amount).toFixed(2);
+            const monthlyLabel = item.recurring === 'yearly' ? '<span class="monthly-label"> /mo</span>' : '';
+            return `
             <div class="finance-item" data-finance-id="${item.id}" data-finance-type="${type}">
                 <div class="finance-item-left">
                     <div class="finance-item-desc">${item.description}</div>
@@ -1245,10 +1258,10 @@ class TaskManager {
                     </div>
                 </div>
                 <div class="finance-item-amount ${isIncome ? 'income' : 'expense'}">
-                    ${isIncome ? '+' : '-'}$${item.amount.toFixed(2)}
+                    ${isIncome ? '+' : '-'}$${displayAmount}${monthlyLabel}
                 </div>
             </div>
-        `).join('');
+        `}).join('');
 
         document.querySelectorAll('.finance-item').forEach(item => {
             item.addEventListener('click', (e) => {
