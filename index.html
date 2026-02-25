@@ -654,33 +654,12 @@
 
                     <div class="settings-section">
                         <h3>Category Management</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.75rem;">Categories are shared across Tasks, Habits, and Finance.</p>
                         <div id="categoryManagement">
-                            <!-- Task Categories -->
-                            <div class="category-manage-group">
-                                <h4>Task Categories</h4>
-                                <ul class="category-list" id="taskCategoryList"></ul>
-                                <div class="category-add-row">
-                                    <input type="text" id="newTaskCategoryText" placeholder="New category name" class="category-add-input">
-                                    <button class="btn btn-primary btn-sm" onclick="app.addCategoryFromSettings('tasks')">Add</button>
-                                </div>
-                            </div>
-                            <!-- Habit Categories -->
-                            <div class="category-manage-group">
-                                <h4>Habit Categories</h4>
-                                <ul class="category-list" id="habitCategoryList"></ul>
-                                <div class="category-add-row">
-                                    <input type="text" id="newHabitCategoryText" placeholder="New category name" class="category-add-input">
-                                    <button class="btn btn-primary btn-sm" onclick="app.addCategoryFromSettings('habits')">Add</button>
-                                </div>
-                            </div>
-                            <!-- Finance Categories -->
-                            <div class="category-manage-group">
-                                <h4>Finance Categories</h4>
-                                <ul class="category-list" id="financeCategoryList"></ul>
-                                <div class="category-add-row">
-                                    <input type="text" id="newFinanceCategoryText" placeholder="New category name" class="category-add-input">
-                                    <button class="btn btn-primary btn-sm" onclick="app.addCategoryFromSettings('finance')">Add</button>
-                                </div>
+                            <ul class="category-list" id="categoryList"></ul>
+                            <div class="category-add-row">
+                                <input type="text" id="newCategoryText" placeholder="New category name" class="category-add-input">
+                                <button class="btn btn-primary btn-sm" onclick="app.addCategoryFromSettings()">Add</button>
                             </div>
                         </div>
                     </div>

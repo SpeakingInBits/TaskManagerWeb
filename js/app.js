@@ -1077,7 +1077,7 @@ class TaskManager {
     // ========================
     loadCategoryDropdown(type) {
         const select = document.getElementById(`${type}Category`);
-        const categories = storage.getCategories(type);
+        const categories = storage.getCategories();
 
         // Preserve current selection
         const currentValue = select.value;
@@ -1128,7 +1128,7 @@ class TaskManager {
         const categoryName = textInput.value.trim();
 
         if (categoryName) {
-            if (storage.addCategory(type, categoryName)) {
+            if (storage.addCategory(categoryName)) {
                 this.loadCategoryDropdown(type);
                 const select = document.getElementById(`${type}Category`);
                 select.value = categoryName;
@@ -1153,30 +1153,24 @@ class TaskManager {
     // Settings Category Management
     // ========================
     renderCategoryManagement() {
-        [
-            { type: 'tasks', listId: 'taskCategoryList' },
-            { type: 'habits', listId: 'habitCategoryList' },
-            { type: 'finance', listId: 'financeCategoryList' }
-        ].forEach(({ type, listId }) => {
-            const list = document.getElementById(listId);
-            if (!list) return;
-            const categories = storage.getCategories(type);
-            list.innerHTML = categories.length === 0
-                ? '<li style="color: var(--text-light); font-size: 0.9rem; padding: 0.4rem 0;">No categories yet.</li>'
-                : categories.map(cat => `
-                    <li class="category-list-item" data-type="${type}" data-name="${this.escapeHtml(cat)}">
-                        <span class="category-name">${this.escapeHtml(cat)}</span>
-                        <button class="btn btn-secondary btn-sm" onclick="app.startEditCategory('${type}', '${this.escapeHtml(cat)}', this)">Edit</button>
-                        <button class="btn btn-danger btn-sm" onclick="app.deleteCategoryItem('${type}', '${this.escapeHtml(cat)}')">Delete</button>
-                    </li>`).join('');
-        });
+        const list = document.getElementById('categoryList');
+        if (!list) return;
+        const categories = storage.getCategories();
+        list.innerHTML = categories.length === 0
+            ? '<li style="color: var(--text-light); font-size: 0.9rem; padding: 0.4rem 0;">No categories yet.</li>'
+            : categories.map(cat => `
+                <li class="category-list-item" data-name="${this.escapeHtml(cat)}">
+                    <span class="category-name">${this.escapeHtml(cat)}</span>
+                    <button class="btn btn-secondary btn-sm" onclick="app.startEditCategory('${this.escapeHtml(cat)}', this)">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="app.deleteCategoryItem('${this.escapeHtml(cat)}')">Delete</button>
+                </li>`).join('');
     }
 
     escapeHtml(str) {
         return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    startEditCategory(type, name, btn) {
+    startEditCategory(name, btn) {
         const li = btn.closest('li');
         const nameSpan = li.querySelector('.category-name');
         nameSpan.style.display = 'none';
@@ -1186,7 +1180,7 @@ class TaskManager {
         input.value = name;
         li.insertBefore(input, nameSpan);
         btn.textContent = 'Save';
-        btn.onclick = () => this.saveEditCategory(type, name, input, btn);
+        btn.onclick = () => this.saveEditCategory(name, input, btn);
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'btn btn-secondary btn-sm';
         cancelBtn.textContent = 'Cancel';
@@ -1195,7 +1189,7 @@ class TaskManager {
         input.focus();
     }
 
-    saveEditCategory(type, oldName, input, btn) {
+    saveEditCategory(oldName, input, btn) {
         const newName = input.value.trim();
         if (!newName) {
             alert('Please enter a category name.');
@@ -1205,28 +1199,27 @@ class TaskManager {
             this.renderCategoryManagement();
             return;
         }
-        if (!storage.updateCategory(type, oldName, newName)) {
+        if (!storage.updateCategory(oldName, newName)) {
             alert('A category with that name already exists.');
             return;
         }
         this.renderCategoryManagement();
     }
 
-    deleteCategoryItem(type, name) {
+    deleteCategoryItem(name) {
         if (!confirm(`Delete category "${name}"? All related items will have their category cleared.`)) return;
-        storage.deleteCategory(type, name);
+        storage.deleteCategory(name);
         this.renderCategoryManagement();
     }
 
-    addCategoryFromSettings(type) {
-        const inputMap = { tasks: 'newTaskCategoryText', habits: 'newHabitCategoryText', finance: 'newFinanceCategoryText' };
-        const input = document.getElementById(inputMap[type]);
+    addCategoryFromSettings() {
+        const input = document.getElementById('newCategoryText');
         const name = input.value.trim();
         if (!name) {
             alert('Please enter a category name.');
             return;
         }
-        if (!storage.addCategory(type, name)) {
+        if (!storage.addCategory(name)) {
             alert('This category already exists.');
             return;
         }
