@@ -1078,7 +1078,7 @@ class TaskManager {
     // ========================
     loadCategoryDropdown(type) {
         const select = document.getElementById(`${type}Category`);
-        const categories = storage.getCategories(type);
+        const categories = storage.getCategories();
 
         // Preserve current selection
         const currentValue = select.value;
@@ -1129,7 +1129,7 @@ class TaskManager {
         const categoryName = textInput.value.trim();
 
         if (categoryName) {
-            if (storage.addCategory(type, categoryName)) {
+            if (storage.addCategory(categoryName)) {
                 this.loadCategoryDropdown(type);
                 const select = document.getElementById(`${type}Category`);
                 select.value = categoryName;
@@ -1151,7 +1151,84 @@ class TaskManager {
     }
 
     // ========================
-    // Finances Management
+    // Settings Category Management
+    // ========================
+    renderCategoryManagement() {
+        const list = document.getElementById('categoryList');
+        if (!list) return;
+        const categories = storage.getCategories();
+        list.innerHTML = categories.length === 0
+            ? '<li style="color: var(--text-light); font-size: 0.9rem; padding: 0.4rem 0;">No categories yet.</li>'
+            : categories.map(cat => `
+                <li class="category-list-item" data-name="${this.escapeHtml(cat)}">
+                    <span class="category-name">${this.escapeHtml(cat)}</span>
+                    <button class="btn btn-secondary btn-sm" onclick="app.startEditCategory('${this.escapeHtml(cat)}', this)">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="app.deleteCategoryItem('${this.escapeHtml(cat)}')">Delete</button>
+                </li>`).join('');
+    }
+
+    escapeHtml(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    startEditCategory(name, btn) {
+        const li = btn.closest('li');
+        const nameSpan = li.querySelector('.category-name');
+        nameSpan.style.display = 'none';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'category-edit-input';
+        input.value = name;
+        li.insertBefore(input, nameSpan);
+        btn.textContent = 'Save';
+        btn.onclick = () => this.saveEditCategory(name, input, btn);
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-secondary btn-sm';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.onclick = () => this.renderCategoryManagement();
+        btn.after(cancelBtn);
+        input.focus();
+    }
+
+    saveEditCategory(oldName, input, btn) {
+        const newName = input.value.trim();
+        if (!newName) {
+            alert('Please enter a category name.');
+            return;
+        }
+        if (newName === oldName) {
+            this.renderCategoryManagement();
+            return;
+        }
+        if (!storage.updateCategory(oldName, newName)) {
+            alert('A category with that name already exists.');
+            return;
+        }
+        this.renderCategoryManagement();
+    }
+
+    deleteCategoryItem(name) {
+        if (!confirm(`Delete category "${name}"? All related items will have their category cleared.`)) return;
+        storage.deleteCategory(name);
+        this.renderCategoryManagement();
+    }
+
+    addCategoryFromSettings() {
+        const input = document.getElementById('newCategoryText');
+        const name = input.value.trim();
+        if (!name) {
+            alert('Please enter a category name.');
+            return;
+        }
+        if (!storage.addCategory(name)) {
+            alert('This category already exists.');
+            return;
+        }
+        input.value = '';
+        this.renderCategoryManagement();
+    }
+
+
     // ========================
     initializeFinanceDateFilter() {
         const today = new Date();
@@ -1527,6 +1604,7 @@ class TaskManager {
     renderSettings() {
         this.loadSettings();
         this.updateSettingsStatus();
+        this.renderCategoryManagement();
     }
 
     loadSettings() {

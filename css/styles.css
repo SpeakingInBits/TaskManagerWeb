@@ -1242,7 +1242,71 @@ html, body {
 }
 
 /* ========================
+   Category Management
+   ======================== */
+.category-manage-group {
+    margin-bottom: 1.25rem;
+}
+
+.category-manage-group h4 {
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    color: var(--text-light);
+}
+
+.category-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem 0;
+}
+
+.category-list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.category-list-item:last-child {
+    border-bottom: none;
+}
+
+.category-list-item .category-name {
+    flex: 1;
+    font-size: 0.9rem;
+}
+
+.category-list-item .category-edit-input {
+    flex: 1;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--primary-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.category-add-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.category-add-input {
+    flex: 1;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.btn-sm {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+/* ========================
    States
+
    ======================== */
 .empty-state {
     text-align: center;

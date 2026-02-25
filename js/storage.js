@@ -32,11 +32,7 @@ class StorageManager {
             charges: [],
             rewards: [],
             purchaseHistory: [],
-            categories: {
-                tasks: ['Work', 'Personal', 'Home', 'Shopping'],
-                habits: ['Health', 'Fitness', 'Learning', 'Productivity'],
-                finance: ['Food', 'Transportation', 'Entertainment', 'Utilities', 'Income']
-            },
+            categories: ['Work', 'Personal', 'Home', 'Shopping', 'Health', 'Fitness', 'Learning', 'Productivity', 'Food', 'Transportation', 'Entertainment', 'Utilities', 'Income'],
             userStats: {
                 totalPoints: 0,
                 level: 1,
@@ -493,27 +489,79 @@ class StorageManager {
     // ========================
     // Category Management
     // ========================
-    getCategories(type) {
+    getCategories() {
         const data = this.getData();
-        return (data.categories && data.categories[type]) || [];
+        // Migrate old per-type structure to a single shared array
+        if (data.categories && !Array.isArray(data.categories)) {
+            const merged = [...new Set([
+                ...(data.categories.tasks || []),
+                ...(data.categories.habits || []),
+                ...(data.categories.finance || [])
+            ])];
+            data.categories = merged;
+            this.saveData(data);
+        }
+        return Array.isArray(data.categories) ? data.categories : [];
     }
 
-    addCategory(type, categoryName) {
+    addCategory(categoryName) {
         const data = this.getData();
-        if (!data.categories) {
-            data.categories = { tasks: [], habits: [], finance: [] };
-        }
-        if (!data.categories[type]) {
-            data.categories[type] = [];
-        }
+        if (!Array.isArray(data.categories)) data.categories = [];
 
         const trimmedName = categoryName.trim();
-        if (trimmedName && !data.categories[type].includes(trimmedName)) {
-            data.categories[type].push(trimmedName);
+        if (trimmedName && !data.categories.includes(trimmedName)) {
+            data.categories.push(trimmedName);
             this.saveData(data);
             return true;
         }
         return false;
+    }
+
+    updateCategory(oldName, newName) {
+        const data = this.getData();
+        if (!Array.isArray(data.categories)) return false;
+
+        const trimmedNew = newName.trim();
+        if (!trimmedNew || data.categories.includes(trimmedNew)) return false;
+
+        const idx = data.categories.indexOf(oldName);
+        if (idx === -1) return false;
+
+        data.categories[idx] = trimmedNew;
+
+        // Propagate rename to all item types
+        data.tasks = data.tasks.map(t => t.category === oldName ? { ...t, category: trimmedNew } : t);
+        data.habits = data.habits.map(h => h.category === oldName ? { ...h, category: trimmedNew } : h);
+        data.expenses = data.expenses.map(e => e.category === oldName ? { ...e, category: trimmedNew } : e);
+        data.revenue = data.revenue.map(r => r.category === oldName ? { ...r, category: trimmedNew } : r);
+        if (data.charges) {
+            data.charges = data.charges.map(c => c.category === oldName ? { ...c, category: trimmedNew } : c);
+        }
+
+        this.saveData(data);
+        return true;
+    }
+
+    deleteCategory(categoryName) {
+        const data = this.getData();
+        if (!Array.isArray(data.categories)) return false;
+
+        const idx = data.categories.indexOf(categoryName);
+        if (idx === -1) return false;
+
+        data.categories.splice(idx, 1);
+
+        // Clear category from all item types
+        data.tasks = data.tasks.map(t => t.category === categoryName ? { ...t, category: null } : t);
+        data.habits = data.habits.map(h => h.category === categoryName ? { ...h, category: null } : h);
+        data.expenses = data.expenses.map(e => e.category === categoryName ? { ...e, category: null } : e);
+        data.revenue = data.revenue.map(r => r.category === categoryName ? { ...r, category: null } : r);
+        if (data.charges) {
+            data.charges = data.charges.map(c => c.category === categoryName ? { ...c, category: null } : c);
+        }
+
+        this.saveData(data);
+        return true;
     }
 
     // ========================

@@ -653,6 +653,18 @@
                     </div>
 
                     <div class="settings-section">
+                        <h3>Category Management</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.75rem;">Categories are shared across Tasks, Habits, and Finance.</p>
+                        <div id="categoryManagement">
+                            <ul class="category-list" id="categoryList"></ul>
+                            <div class="category-add-row">
+                                <input type="text" id="newCategoryText" placeholder="New category name" class="category-add-input">
+                                <button class="btn btn-primary btn-sm" onclick="app.addCategoryFromSettings()">Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
                         <h3>Data Version</h3>
                         <p>Version: <span id="dataVersion">1.0.0</span></p>
                         <p>Last Updated: <span id="lastUpdated">Never</span></p>
