@@ -799,8 +799,9 @@ class TaskManager {
     }
 
     editProjectFromDetail() {
+        const projectId = this.currentEditingProjectId;
         this.closeProjectDetailModal();
-        this.openProjectModal(this.currentEditingProjectId);
+        this.openProjectModal(projectId);
     }
 
     renderProjectDetailTasks(tasks) {
