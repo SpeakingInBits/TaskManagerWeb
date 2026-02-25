@@ -516,6 +516,61 @@ class StorageManager {
         return false;
     }
 
+    updateCategory(type, oldName, newName) {
+        const data = this.getData();
+        if (!data.categories || !data.categories[type]) return false;
+
+        const trimmedNew = newName.trim();
+        if (!trimmedNew || data.categories[type].includes(trimmedNew)) return false;
+
+        const idx = data.categories[type].indexOf(oldName);
+        if (idx === -1) return false;
+
+        data.categories[type][idx] = trimmedNew;
+
+        // Update all related items
+        if (type === 'tasks') {
+            data.tasks = data.tasks.map(t => t.category === oldName ? { ...t, category: trimmedNew } : t);
+        } else if (type === 'habits') {
+            data.habits = data.habits.map(h => h.category === oldName ? { ...h, category: trimmedNew } : h);
+        } else if (type === 'finance') {
+            data.expenses = data.expenses.map(e => e.category === oldName ? { ...e, category: trimmedNew } : e);
+            data.revenue = data.revenue.map(r => r.category === oldName ? { ...r, category: trimmedNew } : r);
+            if (data.charges) {
+                data.charges = data.charges.map(c => c.category === oldName ? { ...c, category: trimmedNew } : c);
+            }
+        }
+
+        this.saveData(data);
+        return true;
+    }
+
+    deleteCategory(type, categoryName) {
+        const data = this.getData();
+        if (!data.categories || !data.categories[type]) return false;
+
+        const idx = data.categories[type].indexOf(categoryName);
+        if (idx === -1) return false;
+
+        data.categories[type].splice(idx, 1);
+
+        // Clear category from all related items
+        if (type === 'tasks') {
+            data.tasks = data.tasks.map(t => t.category === categoryName ? { ...t, category: null } : t);
+        } else if (type === 'habits') {
+            data.habits = data.habits.map(h => h.category === categoryName ? { ...h, category: null } : h);
+        } else if (type === 'finance') {
+            data.expenses = data.expenses.map(e => e.category === categoryName ? { ...e, category: null } : e);
+            data.revenue = data.revenue.map(r => r.category === categoryName ? { ...r, category: null } : r);
+            if (data.charges) {
+                data.charges = data.charges.map(c => c.category === categoryName ? { ...c, category: null } : c);
+            }
+        }
+
+        this.saveData(data);
+        return true;
+    }
+
     // ========================
     // Settings Management
     // ========================
