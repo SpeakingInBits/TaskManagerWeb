@@ -42,3 +42,84 @@ jobs:
           git add service-worker.js
           git commit -m "chore: update service worker cache version to $(git rev-parse --short HEAD)"
           git push
+
+  create-release:
+    runs-on: ubuntu-latest
+    needs: update-cache
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Determine version bump type
+        id: version_bump
+        run: |
+          # Use the original triggering commit message, not any bot chore commits
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          echo "Commit message: $COMMIT_MSG"
+
+          if echo "$COMMIT_MSG" | grep -qE '^(\w+)(\(.+\))?!:|^BREAKING CHANGE'; then
+            echo "bump=major" >> $GITHUB_OUTPUT
+          elif echo "$COMMIT_MSG" | grep -qE '^feat(\(.+\))?:'; then
+            echo "bump=minor" >> $GITHUB_OUTPUT
+          elif echo "$COMMIT_MSG" | grep -qE '^fix(\(.+\))?:'; then
+            echo "bump=patch" >> $GITHUB_OUTPUT
+          else
+            echo "bump=none" >> $GITHUB_OUTPUT
+            echo "No releasable commit type found (not feat/fix/breaking). Skipping release."
+          fi
+
+      - name: Get latest tag and parse version
+        if: steps.version_bump.outputs.bump != 'none'
+        id: get_tag
+        run: |
+          LATEST_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.0"
+            echo "No existing tags found, starting from v0.0.0"
+          fi
+
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+          # Strip leading 'v' and split into parts; default missing patch to 0
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -ra PARTS <<< "$VERSION"
+          echo "major=${PARTS[0]:-0}" >> $GITHUB_OUTPUT
+          echo "minor=${PARTS[1]:-0}" >> $GITHUB_OUTPUT
+          echo "patch=${PARTS[2]:-0}" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        if: steps.version_bump.outputs.bump != 'none'
+        id: new_version
+        run: |
+          BUMP="${{ steps.version_bump.outputs.bump }}"
+          MAJOR=${{ steps.get_tag.outputs.major }}
+          MINOR=${{ steps.get_tag.outputs.minor }}
+          PATCH=${{ steps.get_tag.outputs.patch }}
+
+          if [ "$BUMP" == "major" ]; then
+            NEW_VERSION="v$((MAJOR + 1)).0.0"
+          elif [ "$BUMP" == "minor" ]; then
+            NEW_VERSION="v${MAJOR}.$((MINOR + 1)).0"
+          else
+            NEW_VERSION="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version will be: $NEW_VERSION"
+
+      - name: Create GitHub Release
+        if: steps.version_bump.outputs.bump != 'none'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.new_version.outputs.version }}
+          name: Release ${{ steps.new_version.outputs.version }}
+          generate_release_notes: true
+          body: |
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.get_tag.outputs.latest_tag }}...${{ steps.new_version.outputs.version }}
