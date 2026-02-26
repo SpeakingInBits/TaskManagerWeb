@@ -58,9 +58,10 @@ jobs:
 
       - name: Determine version bump type
         id: version_bump
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # Use the original triggering commit message, not any bot chore commits
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
           echo "Commit message: $COMMIT_MSG"
 
           if echo "$COMMIT_MSG" | grep -qE '^(\w+)(\(.+\))?!:|^BREAKING CHANGE'; then
