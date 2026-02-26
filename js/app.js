@@ -646,6 +646,10 @@ class TaskManager {
                 task.completedDate = this.getSelectedDateStr();
                 storage.addPoints(task.points, 'tasks');
                 storage.updateDailyStreak(true);
+                // If repeatable, immediately create next task with recalculated due date
+                if (task.repeatType !== 'none') {
+                    this.createNextRecurringTask(task);
+                }
             } else {
                 // If uncompleting, also recalculate level
                 task.completedDate = null;
@@ -656,6 +660,51 @@ class TaskManager {
             this.renderDashboard();
             this.renderProjects();
         }
+    }
+
+    createNextRecurringTask(completedTask) {
+        const [year, month, day] = completedTask.completedDate.split('-').map(Number);
+        const nextDueDate = new Date(year, month - 1, day);
+
+        switch (completedTask.repeatType) {
+            case 'daily':
+                nextDueDate.setDate(nextDueDate.getDate() + (completedTask.repeatUnit || 1));
+                break;
+            case 'weekly':
+                nextDueDate.setDate(nextDueDate.getDate() + 7 * (completedTask.repeatUnit || 1));
+                break;
+            case 'monthly':
+                nextDueDate.setMonth(nextDueDate.getMonth() + (completedTask.repeatUnit || 1));
+                break;
+            case 'yearly':
+                nextDueDate.setFullYear(nextDueDate.getFullYear() + (completedTask.repeatUnit || 1));
+                break;
+            case 'custom':
+                nextDueDate.setDate(nextDueDate.getDate() + (completedTask.customRepeatDays || 1));
+                break;
+            case 'movable':
+                nextDueDate.setDate(nextDueDate.getDate() + (completedTask.movableRepeatDays || 1));
+                break;
+            default:
+                return;
+        }
+
+        const newTask = {
+            title: completedTask.title,
+            description: completedTask.description,
+            category: completedTask.category,
+            priority: completedTask.priority,
+            points: completedTask.points,
+            projectId: completedTask.projectId,
+            repeatType: completedTask.repeatType,
+            repeatUnit: completedTask.repeatUnit,
+            customRepeatDays: completedTask.customRepeatDays,
+            movableRepeatDays: completedTask.movableRepeatDays,
+            daysOfWeek: completedTask.daysOfWeek,
+            dueDate: storage.formatDate(nextDueDate)
+        };
+
+        storage.addTask(newTask);
     }
 
     // ========================
@@ -1683,61 +1732,8 @@ class TaskManager {
     // Recurring Tasks Processing
     // ========================
     processRecurringTasks() {
-        const tasks = storage.getTasks();
-        const today = storage.formatDate(new Date());
-
-        tasks.forEach(task => {
-            if (task.completed && task.repeatType !== 'none') {
-                if (task.repeatType === 'movable' && task.completedDate === today) {
-                    // Create new task from completion date
-                    const nextDueDate = new Date();
-                    nextDueDate.setDate(nextDueDate.getDate() + task.movableRepeatDays);
-                    
-                    const newTask = {
-                        title: task.title,
-                        description: task.description,
-                        category: task.category,
-                        priority: task.priority,
-                        points: task.points,
-                        projectId: task.projectId,
-                        repeatType: task.repeatType,
-                        movableRepeatDays: task.movableRepeatDays,
-                        dueDate: storage.formatDate(nextDueDate)
-                    };
-
-                    storage.addTask(newTask);
-                    // Reset original task
-                    storage.updateTask(task.id, { completed: false, completedDate: null });
-                } else if (task.repeatType !== 'movable') {
-                    // Check if we should create a new instance
-                    const lastCompletion = new Date(task.completedDate);
-                    const daysSinceCompletion = Math.floor((new Date() - lastCompletion) / (1000 * 60 * 60 * 24));
-
-                    let shouldReset = false;
-                    switch (task.repeatType) {
-                        case 'daily':
-                            shouldReset = daysSinceCompletion >= 1;
-                            break;
-                        case 'weekly':
-                            shouldReset = daysSinceCompletion >= 7;
-                            break;
-                        case 'monthly':
-                            shouldReset = daysSinceCompletion >= 30;
-                            break;
-                        case 'yearly':
-                            shouldReset = daysSinceCompletion >= 365;
-                            break;
-                        case 'custom':
-                            shouldReset = daysSinceCompletion >= task.customRepeatDays;
-                            break;
-                    }
-
-                    if (shouldReset) {
-                        storage.updateTask(task.id, { completed: false, completedDate: null });
-                    }
-                }
-            }
-        });
+        // New recurring tasks are created immediately when a repeatable task is completed
+        // via createNextRecurringTask(). The original completed task stays in history.
     }
 
     // ========================
