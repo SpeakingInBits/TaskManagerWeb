@@ -662,16 +662,43 @@ class TaskManager {
         }
     }
 
+    // Returns the next date strictly after `fromDate` whose day-of-week is in `days` (0=Sun..6=Sat).
+    nextOccurrenceOfDays(fromDate, days) {
+        const next = new Date(fromDate);
+        for (let i = 1; i <= 7; i++) {
+            next.setDate(next.getDate() + 1);
+            if (days.includes(next.getDay())) {
+                return next;
+            }
+        }
+        return next;
+    }
+
     createNextRecurringTask(completedTask) {
         const [year, month, day] = completedTask.completedDate.split('-').map(Number);
-        const nextDueDate = new Date(year, month - 1, day);
+        const completionDate = new Date(year, month - 1, day);
+        const nextDueDate = new Date(completionDate);
+        const hasDaysOfWeek = completedTask.daysOfWeek && completedTask.daysOfWeek.length > 0;
 
         switch (completedTask.repeatType) {
             case 'daily':
-                nextDueDate.setDate(nextDueDate.getDate() + (completedTask.repeatUnit || 1));
+                if (hasDaysOfWeek) {
+                    // Advance to the next allowed day of week after completion
+                    const next = this.nextOccurrenceOfDays(completionDate, completedTask.daysOfWeek);
+                    nextDueDate.setTime(next.getTime());
+                } else {
+                    nextDueDate.setDate(nextDueDate.getDate() + (completedTask.repeatUnit || 1));
+                }
                 break;
             case 'weekly':
-                nextDueDate.setDate(nextDueDate.getDate() + 7 * (completedTask.repeatUnit || 1));
+                if (hasDaysOfWeek) {
+                    // Find the next occurrence of any specified day, then skip (repeatUnit-1) more weeks
+                    const next = this.nextOccurrenceOfDays(completionDate, completedTask.daysOfWeek);
+                    next.setDate(next.getDate() + 7 * ((completedTask.repeatUnit || 1) - 1));
+                    nextDueDate.setTime(next.getTime());
+                } else {
+                    nextDueDate.setDate(nextDueDate.getDate() + 7 * (completedTask.repeatUnit || 1));
+                }
                 break;
             case 'monthly':
                 nextDueDate.setMonth(nextDueDate.getMonth() + (completedTask.repeatUnit || 1));
