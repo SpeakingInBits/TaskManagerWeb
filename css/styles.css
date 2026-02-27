@@ -421,6 +421,12 @@ html, body {
     margin-bottom: 1.5rem;
 }
 
+.tasks-header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
 .tasks-header h2 {
     font-size: 1.875rem;
 }
@@ -450,6 +456,21 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+}
+
+.task-list .task-description,
+.task-list .task-meta,
+.task-list .task-status {
+    display: none;
+}
+
+.task-list.expanded .task-description,
+.task-list.expanded .task-status {
+    display: block;
+}
+
+.task-list.expanded .task-meta {
+    display: flex;
 }
 
 .task-item {
