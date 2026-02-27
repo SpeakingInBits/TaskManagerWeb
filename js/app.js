@@ -395,6 +395,7 @@ class TaskManager {
         const statusFilter = document.getElementById('statusFilter').value;
         const searchTerm = document.getElementById('searchTasks').value.toLowerCase();
         const today = this.getSelectedDateStr();
+        const filtersActive = categoryFilter || statusFilter || searchTerm;
 
         let filtered = tasks.filter(task => {
             // Category filter
@@ -419,7 +420,52 @@ class TaskManager {
             return;
         }
 
-        taskList.innerHTML = filtered.map(task => this.renderTaskItem(task)).join('');
+        let html = '';
+
+        if (filtersActive) {
+            // When filters are active, render a flat list (existing behaviour)
+            html = filtered.map(task => this.renderTaskItem(task)).join('');
+        } else {
+            // Split into "Tasks Due Today" and "Upcoming Tasks"
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+
+            // Include overdue, today's tasks, and undated tasks (no future date = actionable now).
+            // Completed tasks are shown here so users can see today's history in context.
+            const dueToday = filtered.filter(task =>
+                !task.dueDate || task.dueDate <= today
+            );
+
+            // Upcoming: future-dated, not yet completed, non-daily (daily tasks regenerate daily
+            // so a future-dated daily is just the next occurrence — not useful to show as "upcoming").
+            const upcoming = filtered
+                .filter(task =>
+                    !task.completed &&
+                    task.dueDate &&
+                    task.dueDate > today &&
+                    task.repeatType !== 'daily'
+                )
+                .sort((a, b) => {
+                    if (a.dueDate < b.dueDate) return -1;
+                    if (a.dueDate > b.dueDate) return 1;
+                    return (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1);
+                });
+
+            if (dueToday.length > 0) {
+                html += `<h3 class="task-section-header">Tasks Due Today</h3>`;
+                html += dueToday.map(task => this.renderTaskItem(task)).join('');
+            }
+
+            if (upcoming.length > 0) {
+                html += `<h3 class="task-section-header">Upcoming Tasks</h3>`;
+                html += upcoming.map(task => this.renderTaskItem(task)).join('');
+            }
+
+            if (!html) {
+                html = '<p class="empty-state">No tasks found.</p>';
+            }
+        }
+
+        taskList.innerHTML = html;
 
         // Add event listeners to task items
         document.querySelectorAll('.task-checkbox').forEach(checkbox => {
