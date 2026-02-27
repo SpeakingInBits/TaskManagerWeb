@@ -458,6 +458,17 @@ html, body {
     gap: 1rem;
 }
 
+.task-section-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    margin: 0.5rem 0 0;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--border-color); 
+}
+
 .task-list .task-description,
 .task-list .task-meta,
 .task-list .task-status {

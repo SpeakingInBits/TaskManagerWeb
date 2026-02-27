@@ -404,6 +404,7 @@ class TaskManager {
         const statusFilter = document.getElementById('statusFilter').value;
         const searchTerm = document.getElementById('searchTasks').value.toLowerCase();
         const today = this.getSelectedDateStr();
+        const filtersActive = categoryFilter || statusFilter || searchTerm;
 
         let filtered = tasks.filter(task => {
             // Category filter
@@ -428,7 +429,52 @@ class TaskManager {
             return;
         }
 
-        taskList.innerHTML = filtered.map(task => this.renderTaskItem(task)).join('');
+        let html = '';
+
+        if (filtersActive) {
+            // When filters are active, render a flat list (existing behaviour)
+            html = filtered.map(task => this.renderTaskItem(task)).join('');
+        } else {
+            // Split into "Tasks Due Today" and "Upcoming Tasks"
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+
+            // Include overdue, today's tasks, and undated tasks (no future date = actionable now).
+            // Completed tasks are shown here so users can see today's history in context.
+            const dueToday = filtered.filter(task =>
+                !task.dueDate || task.dueDate <= today
+            );
+
+            // Upcoming: future-dated, not yet completed, non-daily (daily tasks regenerate daily
+            // so a future-dated daily is just the next occurrence — not useful to show as "upcoming").
+            const upcoming = filtered
+                .filter(task =>
+                    !task.completed &&
+                    task.dueDate &&
+                    task.dueDate > today &&
+                    task.repeatType !== 'daily'
+                )
+                .sort((a, b) => {
+                    if (a.dueDate < b.dueDate) return -1;
+                    if (a.dueDate > b.dueDate) return 1;
+                    return (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1);
+                });
+
+            if (dueToday.length > 0) {
+                html += `<h3 class="task-section-header">Tasks Due Today</h3>`;
+                html += dueToday.map(task => this.renderTaskItem(task)).join('');
+            }
+
+            if (upcoming.length > 0) {
+                html += `<h3 class="task-section-header">Upcoming Tasks</h3>`;
+                html += upcoming.map(task => this.renderTaskItem(task)).join('');
+            }
+
+            if (!html) {
+                html = '<p class="empty-state">No tasks found.</p>';
+            }
+        }
+
+        taskList.innerHTML = html;
 
         // Add event listeners to task items
         document.querySelectorAll('.task-checkbox').forEach(checkbox => {
@@ -655,6 +701,10 @@ class TaskManager {
                 task.completedDate = this.getSelectedDateStr();
                 storage.addPoints(task.points, 'tasks');
                 storage.updateDailyStreak(true);
+                // If repeatable, immediately create next task with recalculated due date
+                if (task.repeatType !== 'none') {
+                    this.createNextRecurringTask(task);
+                }
             } else {
                 // If uncompleting, also recalculate level
                 task.completedDate = null;
@@ -665,6 +715,78 @@ class TaskManager {
             this.renderDashboard();
             this.renderProjects();
         }
+    }
+
+    // Returns the next date strictly after `fromDate` whose day-of-week is in `days` (0=Sun..6=Sat).
+    nextOccurrenceOfDays(fromDate, days) {
+        const next = new Date(fromDate);
+        for (let i = 1; i <= 7; i++) {
+            next.setDate(next.getDate() + 1);
+            if (days.includes(next.getDay())) {
+                return next;
+            }
+        }
+        return next;
+    }
+
+    createNextRecurringTask(completedTask) {
+        const [year, month, day] = completedTask.completedDate.split('-').map(Number);
+        const completionDate = new Date(year, month - 1, day);
+        const nextDueDate = new Date(completionDate);
+        const hasDaysOfWeek = completedTask.daysOfWeek && completedTask.daysOfWeek.length > 0;
+
+        switch (completedTask.repeatType) {
+            case 'daily':
+                if (hasDaysOfWeek) {
+                    // Advance to the next allowed day of week after completion
+                    const next = this.nextOccurrenceOfDays(completionDate, completedTask.daysOfWeek);
+                    nextDueDate.setTime(next.getTime());
+                } else {
+                    nextDueDate.setDate(nextDueDate.getDate() + (completedTask.repeatUnit || 1));
+                }
+                break;
+            case 'weekly':
+                if (hasDaysOfWeek) {
+                    // Find the next occurrence of any specified day, then skip (repeatUnit-1) more weeks
+                    const next = this.nextOccurrenceOfDays(completionDate, completedTask.daysOfWeek);
+                    next.setDate(next.getDate() + 7 * ((completedTask.repeatUnit || 1) - 1));
+                    nextDueDate.setTime(next.getTime());
+                } else {
+                    nextDueDate.setDate(nextDueDate.getDate() + 7 * (completedTask.repeatUnit || 1));
+                }
+                break;
+            case 'monthly':
+                nextDueDate.setMonth(nextDueDate.getMonth() + (completedTask.repeatUnit || 1));
+                break;
+            case 'yearly':
+                nextDueDate.setFullYear(nextDueDate.getFullYear() + (completedTask.repeatUnit || 1));
+                break;
+            case 'custom':
+                nextDueDate.setDate(nextDueDate.getDate() + (completedTask.customRepeatDays || 1));
+                break;
+            case 'movable':
+                nextDueDate.setDate(nextDueDate.getDate() + (completedTask.movableRepeatDays || 1));
+                break;
+            default:
+                return;
+        }
+
+        const newTask = {
+            title: completedTask.title,
+            description: completedTask.description,
+            category: completedTask.category,
+            priority: completedTask.priority,
+            points: completedTask.points,
+            projectId: completedTask.projectId,
+            repeatType: completedTask.repeatType,
+            repeatUnit: completedTask.repeatUnit,
+            customRepeatDays: completedTask.customRepeatDays,
+            movableRepeatDays: completedTask.movableRepeatDays,
+            daysOfWeek: completedTask.daysOfWeek,
+            dueDate: storage.formatDate(nextDueDate)
+        };
+
+        storage.addTask(newTask);
     }
 
     // ========================
@@ -1692,61 +1814,8 @@ class TaskManager {
     // Recurring Tasks Processing
     // ========================
     processRecurringTasks() {
-        const tasks = storage.getTasks();
-        const today = storage.formatDate(new Date());
-
-        tasks.forEach(task => {
-            if (task.completed && task.repeatType !== 'none') {
-                if (task.repeatType === 'movable' && task.completedDate === today) {
-                    // Create new task from completion date
-                    const nextDueDate = new Date();
-                    nextDueDate.setDate(nextDueDate.getDate() + task.movableRepeatDays);
-                    
-                    const newTask = {
-                        title: task.title,
-                        description: task.description,
-                        category: task.category,
-                        priority: task.priority,
-                        points: task.points,
-                        projectId: task.projectId,
-                        repeatType: task.repeatType,
-                        movableRepeatDays: task.movableRepeatDays,
-                        dueDate: storage.formatDate(nextDueDate)
-                    };
-
-                    storage.addTask(newTask);
-                    // Reset original task
-                    storage.updateTask(task.id, { completed: false, completedDate: null });
-                } else if (task.repeatType !== 'movable') {
-                    // Check if we should create a new instance
-                    const lastCompletion = new Date(task.completedDate);
-                    const daysSinceCompletion = Math.floor((new Date() - lastCompletion) / (1000 * 60 * 60 * 24));
-
-                    let shouldReset = false;
-                    switch (task.repeatType) {
-                        case 'daily':
-                            shouldReset = daysSinceCompletion >= 1;
-                            break;
-                        case 'weekly':
-                            shouldReset = daysSinceCompletion >= 7;
-                            break;
-                        case 'monthly':
-                            shouldReset = daysSinceCompletion >= 30;
-                            break;
-                        case 'yearly':
-                            shouldReset = daysSinceCompletion >= 365;
-                            break;
-                        case 'custom':
-                            shouldReset = daysSinceCompletion >= task.customRepeatDays;
-                            break;
-                    }
-
-                    if (shouldReset) {
-                        storage.updateTask(task.id, { completed: false, completedDate: null });
-                    }
-                }
-            }
-        });
+        // New recurring tasks are created immediately when a repeatable task is completed
+        // via createNextRecurringTask(). The original completed task stays in history.
     }
 
     // ========================
