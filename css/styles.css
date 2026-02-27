@@ -421,6 +421,12 @@ html, body {
     margin-bottom: 1.5rem;
 }
 
+.tasks-header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
 .tasks-header h2 {
     font-size: 1.875rem;
 }
@@ -460,7 +466,22 @@ html, body {
     color: var(--text-light);
     margin: 0.5rem 0 0;
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color); 
+}
+
+.task-list .task-description,
+.task-list .task-meta,
+.task-list .task-status {
+    display: none;
+}
+
+.task-list.expanded .task-description,
+.task-list.expanded .task-status {
+    display: block;
+}
+
+.task-list.expanded .task-meta {
+    display: flex;
 }
 
 .task-item {

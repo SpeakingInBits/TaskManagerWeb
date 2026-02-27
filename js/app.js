@@ -12,6 +12,7 @@ class TaskManager {
         this.currentEditingRewardId = null;
         this.currentEditingFinanceType = null;
         this.selectedDate = new Date();
+        this.tasksExpanded = false;
         this.emojis = [
             // Activity
             '💪', '🏃', '🚴', '🏊', '🧘', '💃', '🕺', '⛹️',
@@ -56,6 +57,7 @@ class TaskManager {
 
         // Tasks section
         document.getElementById('addTaskBtn').addEventListener('click', () => this.openTaskModal());
+        document.getElementById('toggleTaskViewBtn').addEventListener('click', () => this.toggleTaskView());
         document.getElementById('taskForm').addEventListener('submit', (e) => this.saveTask(e));
         document.getElementById('cancelTaskBtn').addEventListener('click', () => this.closeTaskModal());
         document.getElementById('deleteTaskBtn').addEventListener('click', () => this.deleteTask());
@@ -384,6 +386,13 @@ class TaskManager {
     // ========================
     // Tasks Management
     // ========================
+    toggleTaskView() {
+        this.tasksExpanded = !this.tasksExpanded;
+        const btn = document.getElementById('toggleTaskViewBtn');
+        btn.textContent = this.tasksExpanded ? '⊟ Collapse Details' : '⊞ Expand Details';
+        document.getElementById('taskList').classList.toggle('expanded', this.tasksExpanded);
+    }
+
     renderTasks() {
         this.updateCategoryFilter();
         this.filterTasks();
