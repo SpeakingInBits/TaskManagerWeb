@@ -191,7 +191,12 @@ class TaskManager {
         document.getElementById('goTodayBtn')!.addEventListener('click', () => {
             this.selectedDate = new Date();
             this.updateDateNavigator();
-            this.render();
+            const activeTabName = (document.querySelector('.nav-tab.active') as HTMLElement | null)?.dataset.tab;
+            if (activeTabName) {
+                this.switchTab(activeTabName);
+            } else {
+                this.renderDashboard();
+            }
         });
     }
 
