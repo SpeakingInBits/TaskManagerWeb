@@ -138,7 +138,64 @@ The app features a gamification system with points, levels, and daily streaks to
    - The app will appear in your applications menu
    - You can also launch it from the browser's apps page: `chrome://apps`
 
-## 🚀 Getting Started
+## �️ Development (TypeScript)
+
+This project is written in **TypeScript**. The source files live in `src/` and are compiled to `js/` for the browser.
+
+### Project Structure
+
+```
+src/              # TypeScript source files
+  storage.ts      # Data layer – StorageManager class & interfaces
+  app.ts          # UI layer – TaskManager class
+js/               # Compiled JavaScript (generated – do not edit)
+tests/            # Vitest unit tests
+e2e/              # Playwright end-to-end tests
+```
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18 or later recommended)
+
+### Setup
+
+```bash
+npm install                # Install dependencies
+npx playwright install     # Install Playwright browsers (first time only)
+```
+
+### Build
+
+```bash
+npm run build              # Compile TypeScript → js/
+npm run build:watch        # Compile in watch mode (auto-rebuild on save)
+```
+
+### Run Locally
+
+```bash
+npm run serve              # Start a local dev server at http://localhost:3000
+```
+
+### Testing
+
+```bash
+npm test                   # Run unit tests (Vitest)
+npm run test:watch         # Run unit tests in watch mode
+npm run test:e2e           # Run end-to-end tests (Playwright)
+npm run test:e2e:ui        # Run E2E tests with the Playwright UI
+```
+
+### Workflow
+
+1. Edit TypeScript files in `src/`.
+2. Run `npm run build` (or `build:watch`) to compile.
+3. Open the app via `npm run serve` or the `index.html` file.
+4. Run `npm test` to verify unit tests and `npm run test:e2e` for browser tests.
+
+> **Note:** Never edit files in `js/` directly — they are overwritten on every build.
+
+## �🚀 Getting Started
 
 1. **First Launch**
    - The app will load with empty data

@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# TypeScript build output
+js/*.js
+js/*.js.map
+js/*.d.ts
+
+# Playwright
+test-results/
+playwright-report/
+
+# Misc
+.DS_Store
