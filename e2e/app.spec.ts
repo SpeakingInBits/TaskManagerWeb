@@ -297,6 +297,84 @@ test.describe('Task Manager App', () => {
     });
 
     // ========================
+    // Dashboard Overdue Tasks
+    // ========================
+    test.describe('dashboard overdue tasks', () => {
+        test('should display overdue tasks count on dashboard', async ({ page }) => {
+            await expect(page.locator('#overdueTasksCount')).toBeVisible();
+            await expect(page.locator('#overdueTasksCount')).toHaveText('0');
+        });
+
+        test('should show overdue tasks count when there are overdue tasks', async ({ page }) => {
+            // Add a task with a past due date via localStorage
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const dueDateStr = yesterday.toISOString().split('T')[0];
+
+            await page.evaluate((dueDate) => {
+                const data = JSON.parse(localStorage.getItem('taskManagerData') || '{}');
+                data.tasks = data.tasks || [];
+                data.tasks.push({
+                    id: 'overdue-test-1',
+                    title: 'Overdue Task',
+                    dueDate: dueDate,
+                    priority: 'medium',
+                    points: 10,
+                    repeatType: 'none',
+                    completed: false,
+                    createdDate: new Date().toISOString()
+                });
+                localStorage.setItem('taskManagerData', JSON.stringify(data));
+            }, dueDateStr);
+
+            await page.reload();
+            await page.waitForSelector('.header');
+
+            await expect(page.locator('#overdueTasksCount')).toHaveText('1');
+        });
+
+        test('should not count completed tasks as overdue', async ({ page }) => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const dueDateStr = yesterday.toISOString().split('T')[0];
+
+            await page.evaluate((dueDate) => {
+                const data = JSON.parse(localStorage.getItem('taskManagerData') || '{}');
+                data.tasks = data.tasks || [];
+                data.tasks.push({
+                    id: 'completed-overdue-1',
+                    title: 'Completed Old Task',
+                    dueDate: dueDate,
+                    priority: 'medium',
+                    points: 10,
+                    repeatType: 'none',
+                    completed: true,
+                    completedDate: dueDate,
+                    createdDate: new Date().toISOString()
+                });
+                localStorage.setItem('taskManagerData', JSON.stringify(data));
+            }, dueDateStr);
+
+            await page.reload();
+            await page.waitForSelector('.header');
+
+            await expect(page.locator('#overdueTasksCount')).toHaveText('0');
+        });
+
+        test('clicking tasks due today count navigates to tasks tab', async ({ page }) => {
+            await page.click('#todayTasksItem');
+            await expect(page.locator('#tasks-tab')).toBeVisible();
+        });
+
+        test('clicking overdue tasks count navigates to tasks tab with overdue filter', async ({ page }) => {
+            await page.click('#overdueTasksItem');
+            await expect(page.locator('#tasks-tab')).toBeVisible();
+            const filterValue = await page.locator('#statusFilter').inputValue();
+            expect(filterValue).toBe('overdue');
+        });
+    });
+
+    // ========================
     // Settings
     // ========================
     test.describe('settings', () => {

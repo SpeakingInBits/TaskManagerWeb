@@ -78,9 +78,13 @@
                     <div class="card dashboard-card">
                         <h2>Today's Overview</h2>
                         <div class="overview-stats">
-                            <div class="overview-item">
+                            <div class="overview-item overview-item-clickable" id="todayTasksItem">
                                 <span class="label">Tasks Due Today</span>
                                 <span class="value" id="todayTasksCount">0</span>
+                            </div>
+                            <div class="overview-item overview-item-clickable" id="overdueTasksItem">
+                                <span class="label">Overdue Tasks</span>
+                                <span class="value overdue" id="overdueTasksCount">0</span>
                             </div>
                             <div class="overview-item">
                                 <span class="label">Completed Today</span>

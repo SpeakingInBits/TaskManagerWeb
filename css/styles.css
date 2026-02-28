@@ -326,6 +326,18 @@ html, body {
     color: var(--primary-color);
 }
 
+.overview-item .value.overdue {
+    color: var(--danger-color);
+}
+
+.overview-item-clickable {
+    cursor: pointer;
+}
+
+.overview-item-clickable:hover {
+    background: var(--border-color);
+}
+
 .points-breakdown {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

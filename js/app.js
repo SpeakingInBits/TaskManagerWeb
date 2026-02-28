@@ -155,6 +155,12 @@ class TaskManager {
                 }
             }
         });
+        // Dashboard overview click navigation
+        document.getElementById('todayTasksItem').addEventListener('click', () => this.switchTab('tasks'));
+        document.getElementById('overdueTasksItem').addEventListener('click', () => {
+            document.getElementById('statusFilter').value = 'overdue';
+            this.switchTab('tasks');
+        });
         // Date navigator
         document.getElementById('prevDayBtn').addEventListener('click', () => this.navigateDate(-1));
         document.getElementById('nextDayBtn').addEventListener('click', () => this.navigateDate(1));
@@ -238,6 +244,7 @@ class TaskManager {
         document.getElementById('levelProgress').textContent = `${tasksInCurrentLevel}/${tasksNeeded} tasks`;
         // Selected day's overview
         const todayTasks = tasks.filter(t => t.dueDate === today && !t.completed);
+        const overdueTasks = tasks.filter(t => !t.completed && !!t.dueDate && t.dueDate < today);
         const completedToday = tasks.filter(t => t.completedDate === today);
         const todayDay = this.selectedDate.getDay();
         // Find incomplete habits for selected day
@@ -250,6 +257,7 @@ class TaskManager {
             return todaysCompletions < targetGoal;
         });
         document.getElementById('todayTasksCount').textContent = String(todayTasks.length);
+        document.getElementById('overdueTasksCount').textContent = String(overdueTasks.length);
         document.getElementById('completedTodayCount').textContent = String(completedToday.length);
         document.getElementById('incompleteHabitsCount').textContent = String(incompleteHabits.length);
         // Render incomplete habits list
