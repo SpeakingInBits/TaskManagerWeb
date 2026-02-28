@@ -1,0 +1,35 @@
+{
+  "name": "taskmanagerweb",
+  "version": "1.0.0",
+  "description": "A comprehensive Progressive Web App (PWA) for managing tasks, projects, habits, and finances with gamification features.",
+  "main": "service-worker.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "serve": "npx serve -l 3000 -s ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SpeakingInBits/TaskManagerWeb.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SpeakingInBits/TaskManagerWeb/issues"
+  },
+  "homepage": "https://github.com/SpeakingInBits/TaskManagerWeb#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.3.2",
+    "jsdom": "^28.1.0",
+    "serve": "^14.2.5",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

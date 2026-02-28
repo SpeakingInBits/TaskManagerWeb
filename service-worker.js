@@ -3,8 +3,8 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/css/styles.css',
-  '/js/app.js',
-  '/js/storage.js'
+  '/js/storage.js',
+  '/js/app.js'
 ];
 
 // Install event - cache files
