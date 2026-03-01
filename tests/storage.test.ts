@@ -164,11 +164,64 @@ describe('StorageManager', () => {
             expect(storage.getHabits().length).toBe(0);
         });
 
-        it('should log habit completion and increment streak', () => {
+        it('should log habit completion and set streak to 1 when targetGoal met', () => {
             const habit = storage.addHabit({ name: 'Exercise' });
             storage.logHabitCompletion(habit.id, new Date());
             const updated = storage.getHabits().find(h => h.id === habit.id);
             expect(updated?.streak).toBe(1);
+        });
+
+        it('should not increment streak when targetGoal is not yet met', () => {
+            const habit = storage.addHabit({ name: 'Drink Water', targetGoal: 10 });
+            storage.logHabitCompletion(habit.id, new Date());
+            storage.logHabitCompletion(habit.id, new Date());
+            const updated = storage.getHabits().find(h => h.id === habit.id);
+            expect(updated?.streak).toBe(0);
+        });
+
+        it('should set streak to 1 when targetGoal is fully met', () => {
+            const habit = storage.addHabit({ name: 'Drink Water', targetGoal: 3 });
+            storage.logHabitCompletion(habit.id, new Date());
+            storage.logHabitCompletion(habit.id, new Date());
+            storage.logHabitCompletion(habit.id, new Date());
+            const updated = storage.getHabits().find(h => h.id === habit.id);
+            expect(updated?.streak).toBe(1);
+        });
+
+        it('should count consecutive fully-completed days as streak', () => {
+            const habit = storage.addHabit({ name: 'Exercise' });
+            const day1 = new Date(2025, 0, 13);
+            const day2 = new Date(2025, 0, 14);
+            const day3 = new Date(2025, 0, 15);
+            storage.logHabitCompletion(habit.id, day1);
+            storage.logHabitCompletion(habit.id, day2);
+            storage.logHabitCompletion(habit.id, day3);
+            const updated = storage.getHabits().find(h => h.id === habit.id);
+            expect(updated?.streak).toBe(3);
+        });
+
+        it('should reset streak count when there is a gap between completed days', () => {
+            const habit = storage.addHabit({ name: 'Exercise' });
+            const day1 = new Date(2025, 0, 13);
+            const day3 = new Date(2025, 0, 15);
+            storage.logHabitCompletion(habit.id, day1);
+            storage.logHabitCompletion(habit.id, day3);
+            const updated = storage.getHabits().find(h => h.id === habit.id);
+            expect(updated?.streak).toBe(1);
+        });
+
+        it('should extend streak when retroactively completing a missed day', () => {
+            const habit = storage.addHabit({ name: 'Exercise' });
+            const day1 = new Date(2025, 0, 13);
+            const day2 = new Date(2025, 0, 14);
+            const day3 = new Date(2025, 0, 15);
+            storage.logHabitCompletion(habit.id, day1);
+            storage.logHabitCompletion(habit.id, day3);
+            // Streak is 1 (gap at day2)
+            storage.logHabitCompletion(habit.id, day2);
+            // Now day1, day2, day3 are all complete → streak = 3
+            const updated = storage.getHabits().find(h => h.id === habit.id);
+            expect(updated?.streak).toBe(3);
         });
 
         it('should count habit completions for today', () => {
@@ -192,6 +245,19 @@ describe('StorageManager', () => {
             storage.logHabitCompletion(habit.id, date);
             expect(storage.countHabitCompletionsForDate(habit.id, '2025-01-15')).toBe(2);
             expect(storage.countHabitCompletionsForDate(habit.id, '2025-01-16')).toBe(0);
+        });
+
+        it('should calculate streak correctly using calculateHabitStreak', () => {
+            const habit = storage.addHabit({ name: 'Drink Water', targetGoal: 2 });
+            const day1 = new Date(2025, 0, 13);
+            const day2 = new Date(2025, 0, 14);
+            storage.logHabitCompletion(habit.id, day1);
+            storage.logHabitCompletion(habit.id, day1);
+            storage.logHabitCompletion(habit.id, day2);
+            storage.logHabitCompletion(habit.id, day2);
+            const data = storage.getData();
+            const streak = storage.calculateHabitStreak(habit.id, habit.targetGoal, data.dailyHabitLogs);
+            expect(streak).toBe(2);
         });
     });
 
