@@ -326,14 +326,51 @@ export class StorageManager {
             timestamp: new Date().toISOString()
         });
 
-        // Update habit streak
+        // Update habit streak based on fully-completed consecutive days
         const habit = data.habits.find(h => h.id === habitId);
         if (habit) {
             habit.lastCompletedDate = dateStr;
-            habit.streak = (habit.streak || 0) + 1;
+            habit.streak = this.calculateHabitStreak(habitId, habit.targetGoal, data.dailyHabitLogs);
         }
 
         this.saveData(data);
+    }
+
+    calculateHabitStreak(habitId: string, targetGoal: number, logs: HabitLog[]): number {
+        // Count completions per date for this habit
+        const habitLogs = logs.filter(l => l.habitId === habitId);
+        const countsByDate: Record<string, number> = {};
+        for (const log of habitLogs) {
+            countsByDate[log.date] = (countsByDate[log.date] || 0) + 1;
+        }
+
+        // Get dates where fully completed (>= targetGoal), sorted most recent first
+        const completedDates = Object.keys(countsByDate)
+            .filter(date => countsByDate[date] >= targetGoal)
+            .sort()
+            .reverse();
+
+        if (completedDates.length === 0) return 0;
+
+        // Count consecutive days going backward from the most recent fully-completed day
+        let streak = 1;
+        let currentDate = completedDates[0];
+
+        for (let i = 1; i < completedDates.length; i++) {
+            const [year, month, day] = currentDate.split('-').map(Number);
+            const prevDay = new Date(year, month - 1, day);
+            prevDay.setDate(prevDay.getDate() - 1);
+            const expectedDate = this.formatDate(prevDay);
+
+            if (completedDates[i] === expectedDate) {
+                streak++;
+                currentDate = completedDates[i];
+            } else {
+                break;
+            }
+        }
+
+        return streak;
     }
 
     isHabitCompletedToday(habitId: string): boolean {
