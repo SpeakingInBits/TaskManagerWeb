@@ -1567,6 +1567,50 @@ class TaskManager {
                     }
                 }
             });
+            // Touch events for mobile drag and drop support
+            let touchDragOverItem = null;
+            el.addEventListener('touchstart', () => {
+                this.dragSrcWishId = el.dataset.wishId;
+                el.classList.add('dragging');
+            }, { passive: false });
+            el.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                // Temporarily hide the dragged element so elementFromPoint finds the element underneath
+                el.style.visibility = 'hidden';
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                el.style.visibility = '';
+                const targetItem = target?.closest('.wish-item') ?? null;
+                if (targetItem !== touchDragOverItem) {
+                    touchDragOverItem?.classList.remove('drag-over');
+                    touchDragOverItem = targetItem !== el ? targetItem : null;
+                    touchDragOverItem?.classList.add('drag-over');
+                }
+            }, { passive: false });
+            el.addEventListener('touchend', (e) => {
+                el.classList.remove('dragging');
+                touchDragOverItem?.classList.remove('drag-over');
+                const touch = e.changedTouches[0];
+                el.style.visibility = 'hidden';
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                el.style.visibility = '';
+                const targetItem = target?.closest('.wish-item');
+                const targetId = targetItem?.dataset.wishId;
+                touchDragOverItem = null;
+                if (this.dragSrcWishId && targetId && this.dragSrcWishId !== targetId) {
+                    const allItems = storage.getWishItems();
+                    const srcIdx = allItems.findIndex(i => i.id === this.dragSrcWishId);
+                    const tgtIdx = allItems.findIndex(i => i.id === targetId);
+                    if (srcIdx !== -1 && tgtIdx !== -1) {
+                        const reordered = [...allItems];
+                        const [moved] = reordered.splice(srcIdx, 1);
+                        reordered.splice(tgtIdx, 0, moved);
+                        storage.reorderWishItems(reordered.map(i => i.id));
+                        this.renderWishList();
+                    }
+                }
+                this.dragSrcWishId = null;
+            });
             el.querySelector('.edit-wish-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.openWishItemModal(el.dataset.wishId);
