@@ -87,6 +87,15 @@ export interface Purchase {
     purchaseDate: string;
 }
 
+export interface WishItem {
+    id: string;
+    title: string;
+    url?: string;
+    price?: number;
+    order: number;
+    createdDate: string;
+}
+
 export interface PointsBreakdown {
     tasks: number;
     projects: number;
@@ -123,6 +132,7 @@ export interface AppData {
     categories: string[];
     userStats: UserStats;
     settings: Settings;
+    wishList: WishItem[];
 }
 
 export interface PurchaseResult {
@@ -172,7 +182,8 @@ export class StorageManager {
             },
             settings: {
                 tasksPerLevel: 30
-            }
+            },
+            wishList: []
         };
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
@@ -601,6 +612,58 @@ export class StorageManager {
     getPurchaseHistory(): Purchase[] {
         const data = this.getData();
         return data.purchaseHistory || [];
+    }
+
+    // Wish List Management
+    addWishItem(item: Partial<WishItem>): WishItem {
+        const data = this.getData();
+        if (!data.wishList) data.wishList = [];
+        const newItem: WishItem = {
+            ...item,
+            id: this.generateId(),
+            createdDate: new Date().toISOString(),
+            title: item.title || '',
+            order: data.wishList.length,
+        };
+        data.wishList.push(newItem);
+        this.saveData(data);
+        return newItem;
+    }
+
+    updateWishItem(itemId: string, updates: Partial<WishItem>): WishItem | undefined {
+        const data = this.getData();
+        if (!data.wishList) data.wishList = [];
+        const item = data.wishList.find(w => w.id === itemId);
+        if (item) {
+            Object.assign(item, updates);
+            this.saveData(data);
+        }
+        return item;
+    }
+
+    deleteWishItem(itemId: string): void {
+        const data = this.getData();
+        if (!data.wishList) data.wishList = [];
+        data.wishList = data.wishList.filter(w => w.id !== itemId);
+        // Re-index order values
+        data.wishList.forEach((w, idx) => { w.order = idx; });
+        this.saveData(data);
+    }
+
+    getWishItems(): WishItem[] {
+        const data = this.getData();
+        if (!data.wishList) return [];
+        return data.wishList.slice().sort((a, b) => a.order - b.order);
+    }
+
+    reorderWishItems(orderedIds: string[]): void {
+        const data = this.getData();
+        if (!data.wishList) return;
+        orderedIds.forEach((id, idx) => {
+            const item = data.wishList.find(w => w.id === id);
+            if (item) item.order = idx;
+        });
+        this.saveData(data);
     }
 
     // Points Management

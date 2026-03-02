@@ -43,7 +43,8 @@ export class StorageManager {
             },
             settings: {
                 tasksPerLevel: 30
-            }
+            },
+            wishList: []
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
     }
@@ -179,13 +180,45 @@ export class StorageManager {
             date: dateStr,
             timestamp: new Date().toISOString()
         });
-        // Update habit streak
+        // Update habit streak based on fully-completed consecutive days
         const habit = data.habits.find(h => h.id === habitId);
         if (habit) {
             habit.lastCompletedDate = dateStr;
-            habit.streak = (habit.streak || 0) + 1;
+            habit.streak = this.calculateHabitStreak(habitId, habit.targetGoal, data.dailyHabitLogs);
         }
         this.saveData(data);
+    }
+    calculateHabitStreak(habitId, targetGoal, logs) {
+        // Count completions per date for this habit
+        const habitLogs = logs.filter(l => l.habitId === habitId);
+        const countsByDate = {};
+        for (const log of habitLogs) {
+            countsByDate[log.date] = (countsByDate[log.date] || 0) + 1;
+        }
+        // Get dates where fully completed (>= targetGoal), sorted most recent first
+        const completedDates = Object.keys(countsByDate)
+            .filter(date => countsByDate[date] >= targetGoal)
+            .sort()
+            .reverse();
+        if (completedDates.length === 0)
+            return 0;
+        // Count consecutive days going backward from the most recent fully-completed day
+        let streak = 1;
+        let currentDate = completedDates[0];
+        for (let i = 1; i < completedDates.length; i++) {
+            const [year, month, day] = currentDate.split('-').map(Number);
+            const prevDay = new Date(year, month - 1, day);
+            prevDay.setDate(prevDay.getDate() - 1);
+            const expectedDate = this.formatDate(prevDay);
+            if (completedDates[i] === expectedDate) {
+                streak++;
+                currentDate = completedDates[i];
+            }
+            else {
+                break;
+            }
+        }
+        return streak;
     }
     isHabitCompletedToday(habitId) {
         const data = this.getData();
@@ -390,6 +423,59 @@ export class StorageManager {
     getPurchaseHistory() {
         const data = this.getData();
         return data.purchaseHistory || [];
+    }
+    // Wish List Management
+    addWishItem(item) {
+        const data = this.getData();
+        if (!data.wishList)
+            data.wishList = [];
+        const newItem = {
+            ...item,
+            id: this.generateId(),
+            createdDate: new Date().toISOString(),
+            title: item.title || '',
+            order: data.wishList.length,
+        };
+        data.wishList.push(newItem);
+        this.saveData(data);
+        return newItem;
+    }
+    updateWishItem(itemId, updates) {
+        const data = this.getData();
+        if (!data.wishList)
+            data.wishList = [];
+        const item = data.wishList.find(w => w.id === itemId);
+        if (item) {
+            Object.assign(item, updates);
+            this.saveData(data);
+        }
+        return item;
+    }
+    deleteWishItem(itemId) {
+        const data = this.getData();
+        if (!data.wishList)
+            data.wishList = [];
+        data.wishList = data.wishList.filter(w => w.id !== itemId);
+        // Re-index order values
+        data.wishList.forEach((w, idx) => { w.order = idx; });
+        this.saveData(data);
+    }
+    getWishItems() {
+        const data = this.getData();
+        if (!data.wishList)
+            return [];
+        return data.wishList.slice().sort((a, b) => a.order - b.order);
+    }
+    reorderWishItems(orderedIds) {
+        const data = this.getData();
+        if (!data.wishList)
+            return;
+        orderedIds.forEach((id, idx) => {
+            const item = data.wishList.find(w => w.id === id);
+            if (item)
+                item.order = idx;
+        });
+        this.saveData(data);
     }
     // Points Management
     addPoints(amount, source) {
