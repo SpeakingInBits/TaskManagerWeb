@@ -2,7 +2,7 @@
 // Main Application Logic
 // ========================
 
-import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem } from './storage.js';
+import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem, WishItem } from './storage.js';
 
 interface Activity {
     type: string;
@@ -22,6 +22,8 @@ class TaskManager {
     currentEditingFinanceId: string | null = null;
     currentEditingFinanceType: string | null = null;
     currentEditingRewardId: string | null = null;
+    currentEditingWishItemId: string | null = null;
+    dragSrcWishId: string | null = null;
     selectedDate: Date = new Date();
     tasksExpanded: boolean = false;
     emojis: string[] = [
@@ -125,6 +127,12 @@ class TaskManager {
         document.getElementById('rewardForm')!.addEventListener('submit', (e) => this.saveReward(e));
         document.getElementById('cancelRewardBtn')!.addEventListener('click', () => this.closeRewardModal());
         document.getElementById('deleteRewardBtn')!.addEventListener('click', () => this.deleteReward());
+
+        // Wish List section
+        document.getElementById('addWishItemBtn')!.addEventListener('click', () => this.openWishItemModal());
+        document.getElementById('wishItemForm')!.addEventListener('submit', (e) => this.saveWishItem(e));
+        document.getElementById('cancelWishItemBtn')!.addEventListener('click', () => this.closeWishItemModal());
+        document.getElementById('deleteWishItemBtn')!.addEventListener('click', () => this.deleteWishItem());
 
         // Modal close buttons
         document.querySelectorAll('.close-btn').forEach(btn => {
@@ -238,6 +246,8 @@ class TaskManager {
             this.renderFinances();
         } else if (tabName === 'shop') {
             this.renderShop();
+        } else if (tabName === 'wishlist') {
+            this.renderWishList();
         } else if (tabName === 'settings') {
             this.renderSettings();
         }
@@ -1707,6 +1717,142 @@ class TaskManager {
                 this.renderDashboard();
             } else {
                 alert(result.message);
+            }
+        }
+    }
+
+    // ========================
+    // Wish List
+    // ========================
+    renderWishList(): void {
+        const items = storage.getWishItems();
+        const container = document.getElementById('wishList')!;
+
+        if (items.length === 0) {
+            container.innerHTML = '<p class="empty-state">No items in your wish list. Add one to get started!</p>';
+            return;
+        }
+
+        container.innerHTML = items.map(item => this.renderWishItem(item)).join('');
+
+        container.querySelectorAll<HTMLElement>('.wish-item').forEach(el => {
+            el.addEventListener('dragstart', (e) => {
+                this.dragSrcWishId = el.dataset.wishId!;
+                el.classList.add('dragging');
+                e.dataTransfer!.effectAllowed = 'move';
+            });
+            el.addEventListener('dragend', () => {
+                this.dragSrcWishId = null;
+                el.classList.remove('dragging');
+                container.querySelectorAll<HTMLElement>('.wish-item').forEach(i => i.classList.remove('drag-over'));
+            });
+            el.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer!.dropEffect = 'move';
+                container.querySelectorAll<HTMLElement>('.wish-item').forEach(i => i.classList.remove('drag-over'));
+                el.classList.add('drag-over');
+            });
+            el.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const targetId = el.dataset.wishId!;
+                if (this.dragSrcWishId && this.dragSrcWishId !== targetId) {
+                    const allItems = storage.getWishItems();
+                    const srcIdx = allItems.findIndex(i => i.id === this.dragSrcWishId);
+                    const tgtIdx = allItems.findIndex(i => i.id === targetId);
+                    if (srcIdx !== -1 && tgtIdx !== -1) {
+                        const reordered = [...allItems];
+                        const [moved] = reordered.splice(srcIdx, 1);
+                        reordered.splice(tgtIdx, 0, moved);
+                        storage.reorderWishItems(reordered.map(i => i.id));
+                        this.renderWishList();
+                    }
+                }
+            });
+            el.querySelector('.edit-wish-btn')!.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openWishItemModal(el.dataset.wishId!);
+            });
+        });
+    }
+
+    renderWishItem(item: WishItem): string {
+        const priceStr = item.price !== undefined && item.price !== null
+            ? `<span class="wish-item-price">$${Number(item.price).toFixed(2)}</span>`
+            : '';
+        const urlStr = item.url
+            ? `<a class="wish-item-url" href="${item.url}" target="_blank" rel="noopener noreferrer">🔗 View Listing</a>`
+            : '';
+        return `
+            <div class="wish-item" data-wish-id="${item.id}" draggable="true">
+                <span class="wish-drag-handle" title="Drag to reorder">⠿</span>
+                <div class="wish-item-content">
+                    <div class="wish-item-title">${item.title}</div>
+                    <div class="wish-item-meta">
+                        ${priceStr}
+                        ${urlStr}
+                    </div>
+                </div>
+                <button class="btn btn-secondary edit-wish-btn">Edit</button>
+            </div>
+        `;
+    }
+
+    openWishItemModal(itemId: string | null = null): void {
+        this.currentEditingWishItemId = itemId;
+        const modal = document.getElementById('wishItemModal')!;
+        const form = document.getElementById('wishItemForm') as HTMLFormElement;
+        const deleteBtn = document.getElementById('deleteWishItemBtn') as HTMLElement;
+
+        form.reset();
+        deleteBtn.style.display = 'none';
+
+        document.getElementById('wishItemModalTitle')!.textContent = itemId ? 'Edit Wish List Item' : 'Add Wish List Item';
+
+        if (itemId) {
+            const item = storage.getWishItems().find(w => w.id === itemId);
+            if (item) {
+                (document.getElementById('wishItemTitle') as HTMLInputElement).value = item.title;
+                (document.getElementById('wishItemUrl') as HTMLInputElement).value = item.url || '';
+                (document.getElementById('wishItemPrice') as HTMLInputElement).value =
+                    item.price !== undefined && item.price !== null ? String(item.price) : '';
+                deleteBtn.style.display = 'block';
+            }
+        }
+
+        modal.classList.add('active');
+    }
+
+    closeWishItemModal(): void {
+        document.getElementById('wishItemModal')!.classList.remove('active');
+        this.currentEditingWishItemId = null;
+    }
+
+    saveWishItem(e: Event): void {
+        e.preventDefault();
+
+        const title = (document.getElementById('wishItemTitle') as HTMLInputElement).value;
+        const url = (document.getElementById('wishItemUrl') as HTMLInputElement).value.trim() || undefined;
+        const priceVal = (document.getElementById('wishItemPrice') as HTMLInputElement).value;
+        const price = priceVal !== '' ? parseFloat(priceVal) : undefined;
+
+        const item = { title, url, price };
+
+        if (this.currentEditingWishItemId) {
+            storage.updateWishItem(this.currentEditingWishItemId, item);
+        } else {
+            storage.addWishItem(item);
+        }
+
+        this.closeWishItemModal();
+        this.renderWishList();
+    }
+
+    deleteWishItem(): void {
+        if (this.currentEditingWishItemId) {
+            if (confirm('Are you sure you want to delete this wish list item?')) {
+                storage.deleteWishItem(this.currentEditingWishItemId);
+                this.closeWishItemModal();
+                this.renderWishList();
             }
         }
     }

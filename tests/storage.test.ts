@@ -547,6 +547,72 @@ describe('StorageManager', () => {
     });
 
     // ========================
+    // Wish List
+    // ========================
+    describe('wish list management', () => {
+        it('should add a wish item', () => {
+            const item = storage.addWishItem({ title: 'New Laptop', url: 'https://example.com', price: 999.99 });
+            expect(item.id).toBeDefined();
+            expect(item.title).toBe('New Laptop');
+            expect(item.url).toBe('https://example.com');
+            expect(item.price).toBe(999.99);
+            expect(item.order).toBe(0);
+            expect(item.createdDate).toBeDefined();
+        });
+
+        it('should add a wish item with only title', () => {
+            const item = storage.addWishItem({ title: 'Guitar' });
+            expect(item.title).toBe('Guitar');
+            expect(item.url).toBeUndefined();
+            expect(item.price).toBeUndefined();
+        });
+
+        it('should get all wish items sorted by order', () => {
+            storage.addWishItem({ title: 'Item A' });
+            storage.addWishItem({ title: 'Item B' });
+            storage.addWishItem({ title: 'Item C' });
+            const items = storage.getWishItems();
+            expect(items.length).toBe(3);
+            expect(items[0].order).toBeLessThanOrEqual(items[1].order);
+            expect(items[1].order).toBeLessThanOrEqual(items[2].order);
+        });
+
+        it('should update a wish item', () => {
+            const item = storage.addWishItem({ title: 'Old Title', price: 50 });
+            const updated = storage.updateWishItem(item.id, { title: 'New Title', price: 75 });
+            expect(updated?.title).toBe('New Title');
+            expect(updated?.price).toBe(75);
+        });
+
+        it('should return undefined when updating non-existent wish item', () => {
+            const result = storage.updateWishItem('nonexistent', { title: 'Test' });
+            expect(result).toBeUndefined();
+        });
+
+        it('should delete a wish item and re-index order', () => {
+            storage.addWishItem({ title: 'Item A' });
+            const itemB = storage.addWishItem({ title: 'Item B' });
+            storage.addWishItem({ title: 'Item C' });
+            storage.deleteWishItem(itemB.id);
+            const items = storage.getWishItems();
+            expect(items.length).toBe(2);
+            expect(items[0].order).toBe(0);
+            expect(items[1].order).toBe(1);
+        });
+
+        it('should reorder wish items', () => {
+            const a = storage.addWishItem({ title: 'Item A' });
+            const b = storage.addWishItem({ title: 'Item B' });
+            const c = storage.addWishItem({ title: 'Item C' });
+            storage.reorderWishItems([c.id, a.id, b.id]);
+            const items = storage.getWishItems();
+            expect(items[0].title).toBe('Item C');
+            expect(items[1].title).toBe('Item A');
+            expect(items[2].title).toBe('Item B');
+        });
+    });
+
+    // ========================
     // Clear All Data
     // ========================
     describe('clearAllData', () => {
