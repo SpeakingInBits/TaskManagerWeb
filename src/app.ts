@@ -437,7 +437,7 @@ class TaskManager {
         const statusFilter = (document.getElementById('statusFilter') as HTMLSelectElement).value;
         const searchTerm = (document.getElementById('searchTasks') as HTMLInputElement).value.toLowerCase();
         const today = this.getSelectedDateStr();
-        const filtersActive = categoryFilter || statusFilter || searchTerm;
+        const filtersActive = statusFilter || searchTerm;
 
         let filtered = tasks.filter(task => {
             // Category filter
@@ -469,8 +469,12 @@ class TaskManager {
         } else {
             const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
+            const overdue = filtered.filter(task =>
+                !task.completed && task.dueDate && task.dueDate < today
+            );
+
             const dueToday = filtered.filter(task =>
-                !task.dueDate || task.dueDate <= today
+                task.dueDate && task.dueDate === today
             );
 
             const upcoming = filtered
@@ -486,14 +490,26 @@ class TaskManager {
                     return (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1);
                 });
 
+            const noDueDate = filtered.filter(task => !task.dueDate);
+
+            if (overdue.length > 0) {
+                html += `<h3 class="task-section-header">Overdue</h3>`;
+                html += overdue.map(task => this.renderTaskItem(task)).join('');
+            }
+
             if (dueToday.length > 0) {
-                html += `<h3 class="task-section-header">Tasks Due Today</h3>`;
+                html += `<h3 class="task-section-header">Due Today</h3>`;
                 html += dueToday.map(task => this.renderTaskItem(task)).join('');
             }
 
             if (upcoming.length > 0) {
                 html += `<h3 class="task-section-header">Upcoming Tasks</h3>`;
                 html += upcoming.map(task => this.renderTaskItem(task)).join('');
+            }
+
+            if (noDueDate.length > 0) {
+                html += `<h3 class="task-section-header">No Due Date</h3>`;
+                html += noDueDate.map(task => this.renderTaskItem(task)).join('');
             }
 
             if (!html) {
