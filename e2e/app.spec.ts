@@ -375,6 +375,56 @@ test.describe('Task Manager App', () => {
     });
 
     // ========================
+    // Task Group By
+    // ========================
+    test.describe('task group by', () => {
+        test.beforeEach(async ({ page }) => {
+            // Add tasks with different priorities and categories via localStorage
+            await page.evaluate(() => {
+                const data = JSON.parse(localStorage.getItem('taskManagerData') || '{}');
+                data.tasks = [
+                    { id: 'task-high', title: 'High Task', priority: 'high', points: 10, repeatType: 'none', completed: false, createdDate: new Date().toISOString(), category: 'Work' },
+                    { id: 'task-medium', title: 'Medium Task', priority: 'medium', points: 10, repeatType: 'none', completed: false, createdDate: new Date().toISOString(), category: 'Personal' },
+                    { id: 'task-low', title: 'Low Task', priority: 'low', points: 10, repeatType: 'none', completed: false, createdDate: new Date().toISOString() },
+                ];
+                localStorage.setItem('taskManagerData', JSON.stringify(data));
+            });
+            await page.reload();
+            await page.waitForSelector('.header');
+            await page.click('[data-tab="tasks"]');
+        });
+
+        test('should show group by dropdown', async ({ page }) => {
+            await expect(page.locator('#groupBySelect')).toBeVisible();
+        });
+
+        test('should group tasks by priority', async ({ page }) => {
+            await page.selectOption('#groupBySelect', 'priority');
+            const headers = page.locator('.task-section-header');
+            await expect(headers).toHaveCount(3);
+            await expect(headers.nth(0)).toHaveText('High Priority');
+            await expect(headers.nth(1)).toHaveText('Medium Priority');
+            await expect(headers.nth(2)).toHaveText('Low Priority');
+        });
+
+        test('should group tasks by category', async ({ page }) => {
+            await page.selectOption('#groupBySelect', 'category');
+            const headers = page.locator('.task-section-header');
+            await expect(headers).toHaveCount(3);
+            await expect(headers.nth(0)).toHaveText('Personal');
+            await expect(headers.nth(1)).toHaveText('Work');
+            await expect(headers.nth(2)).toHaveText('Ungrouped');
+        });
+
+        test('should revert to default grouping when no grouping selected', async ({ page }) => {
+            await page.selectOption('#groupBySelect', 'priority');
+            await page.selectOption('#groupBySelect', '');
+            // Default view shows no task-section-header for tasks with no due date
+            await expect(page.locator('.task-item')).toHaveCount(3);
+        });
+    });
+
+    // ========================
     // Settings
     // ========================
     test.describe('settings', () => {

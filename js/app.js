@@ -65,6 +65,7 @@ class TaskManager {
         document.getElementById('taskCategoryCancel').addEventListener('click', () => this.cancelAddCategory('task'));
         document.getElementById('categoryFilter').addEventListener('change', () => this.filterTasks());
         document.getElementById('statusFilter').addEventListener('change', () => this.filterTasks());
+        document.getElementById('groupBySelect').addEventListener('change', () => this.filterTasks());
         document.getElementById('searchTasks').addEventListener('input', () => this.filterTasks());
         // Projects section
         document.getElementById('addProjectBtn').addEventListener('click', () => this.openProjectModal());
@@ -386,6 +387,7 @@ class TaskManager {
         const categoryFilter = document.getElementById('categoryFilter').value;
         const statusFilter = document.getElementById('statusFilter').value;
         const searchTerm = document.getElementById('searchTasks').value.toLowerCase();
+        const groupBy = document.getElementById('groupBySelect').value;
         const today = this.getSelectedDateStr();
         const filtersActive = statusFilter || searchTerm;
         let filtered = tasks.filter(task => {
@@ -412,7 +414,45 @@ class TaskManager {
             return;
         }
         let html = '';
-        if (filtersActive) {
+        if (groupBy === 'priority') {
+            const priorityLabels = { high: 'High Priority', medium: 'Medium Priority', low: 'Low Priority' };
+            const grouped = { high: [], medium: [], low: [], ungrouped: [] };
+            filtered.forEach(task => {
+                if (task.priority && grouped[task.priority]) {
+                    grouped[task.priority].push(task);
+                }
+                else {
+                    grouped['ungrouped'].push(task);
+                }
+            });
+            ['high', 'medium', 'low'].forEach(p => {
+                if (grouped[p].length > 0) {
+                    html += `<h3 class="task-section-header">${priorityLabels[p]}</h3>`;
+                    html += grouped[p].map(task => this.renderTaskItem(task)).join('');
+                }
+            });
+            if (grouped['ungrouped'].length > 0) {
+                html += `<h3 class="task-section-header">Ungrouped</h3>`;
+                html += grouped['ungrouped'].map(task => this.renderTaskItem(task)).join('');
+            }
+        }
+        else if (groupBy === 'category') {
+            const withCategory = filtered.filter(task => task.category);
+            const withoutCategory = filtered.filter(task => !task.category);
+            const categories = [...new Set(withCategory.map(task => task.category))].sort();
+            categories.forEach(cat => {
+                const group = withCategory.filter(task => task.category === cat);
+                if (group.length > 0) {
+                    html += `<h3 class="task-section-header">${cat}</h3>`;
+                    html += group.map(task => this.renderTaskItem(task)).join('');
+                }
+            });
+            if (withoutCategory.length > 0) {
+                html += `<h3 class="task-section-header">Ungrouped</h3>`;
+                html += withoutCategory.map(task => this.renderTaskItem(task)).join('');
+            }
+        }
+        else if (filtersActive) {
             html = filtered.map(task => this.renderTaskItem(task)).join('');
         }
         else {
