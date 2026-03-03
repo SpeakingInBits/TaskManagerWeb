@@ -82,6 +82,7 @@ class TaskManager {
         document.getElementById('taskCategoryCancel')!.addEventListener('click', () => this.cancelAddCategory('task'));
         document.getElementById('categoryFilter')!.addEventListener('change', () => this.filterTasks());
         document.getElementById('statusFilter')!.addEventListener('change', () => this.filterTasks());
+        document.getElementById('groupBySelect')!.addEventListener('change', () => this.filterTasks());
         document.getElementById('searchTasks')!.addEventListener('input', () => this.filterTasks());
 
         // Projects section
@@ -436,6 +437,7 @@ class TaskManager {
         const categoryFilter = (document.getElementById('categoryFilter') as HTMLSelectElement).value;
         const statusFilter = (document.getElementById('statusFilter') as HTMLSelectElement).value;
         const searchTerm = (document.getElementById('searchTasks') as HTMLInputElement).value.toLowerCase();
+        const groupBy = (document.getElementById('groupBySelect') as HTMLSelectElement).value;
         const today = this.getSelectedDateStr();
         const filtersActive = statusFilter || searchTerm;
 
@@ -464,7 +466,42 @@ class TaskManager {
 
         let html = '';
 
-        if (filtersActive) {
+        if (groupBy === 'priority') {
+            const priorityLabels: Record<string, string> = { high: 'High Priority', medium: 'Medium Priority', low: 'Low Priority' };
+            const grouped: Record<string, typeof filtered> = { high: [], medium: [], low: [], ungrouped: [] };
+            filtered.forEach(task => {
+                if (task.priority && grouped[task.priority]) {
+                    grouped[task.priority].push(task);
+                } else {
+                    grouped['ungrouped'].push(task);
+                }
+            });
+            (['high', 'medium', 'low'] as const).forEach(p => {
+                if (grouped[p].length > 0) {
+                    html += `<h3 class="task-section-header">${priorityLabels[p]}</h3>`;
+                    html += grouped[p].map(task => this.renderTaskItem(task)).join('');
+                }
+            });
+            if (grouped['ungrouped'].length > 0) {
+                html += `<h3 class="task-section-header">Ungrouped</h3>`;
+                html += grouped['ungrouped'].map(task => this.renderTaskItem(task)).join('');
+            }
+        } else if (groupBy === 'category') {
+            const withCategory = filtered.filter(task => task.category);
+            const withoutCategory = filtered.filter(task => !task.category);
+            const categories = [...new Set(withCategory.map(task => task.category as string))].sort();
+            categories.forEach(cat => {
+                const group = withCategory.filter(task => task.category === cat);
+                if (group.length > 0) {
+                    html += `<h3 class="task-section-header">${cat}</h3>`;
+                    html += group.map(task => this.renderTaskItem(task)).join('');
+                }
+            });
+            if (withoutCategory.length > 0) {
+                html += `<h3 class="task-section-header">Ungrouped</h3>`;
+                html += withoutCategory.map(task => this.renderTaskItem(task)).join('');
+            }
+        } else if (filtersActive) {
             html = filtered.map(task => this.renderTaskItem(task)).join('');
         } else {
             const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
