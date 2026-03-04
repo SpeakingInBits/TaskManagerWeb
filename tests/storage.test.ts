@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { StorageManager } from '../src/storage';
+import { StorageManager, getDaysUntilDueText } from '../src/storage';
 import type { Task, Habit, FinanceItem, Reward } from '../src/storage';
 
 // Mock localStorage
@@ -622,5 +622,35 @@ describe('StorageManager', () => {
             storage.clearAllData();
             expect(storage.getTasks().length).toBe(0);
         });
+    });
+});
+
+// ========================
+// getDaysUntilDueText
+// ========================
+describe('getDaysUntilDueText', () => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    it('should return "Today" for today\'s date', () => {
+        expect(getDaysUntilDueText(dateStr(new Date()))).toBe('Today');
+    });
+
+    it('should return "1 day" for tomorrow\'s date', () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        expect(getDaysUntilDueText(dateStr(tomorrow))).toBe('1 day');
+    });
+
+    it('should return "X days" for dates in the future', () => {
+        const future = new Date();
+        future.setDate(future.getDate() + 5);
+        expect(getDaysUntilDueText(dateStr(future))).toBe('5 days');
+    });
+
+    it('should return "Overdue" for past dates', () => {
+        const past = new Date();
+        past.setDate(past.getDate() - 3);
+        expect(getDaysUntilDueText(dateStr(past))).toBe('Overdue');
     });
 });

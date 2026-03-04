@@ -1,7 +1,7 @@
 // ========================
 // Main Application Logic
 // ========================
-import { storage, STORAGE_VERSION } from './storage.js';
+import { storage, STORAGE_VERSION, getDaysUntilDueText } from './storage.js';
 class TaskManager {
     constructor() {
         this.currentEditingTaskId = null;
@@ -517,6 +517,9 @@ class TaskManager {
         else if (task.dueDate && task.dueDate < today) {
             status = 'overdue';
         }
+        const dueBadge = task.dueDate && !task.completed
+            ? `<span class="task-due-badge">${getDaysUntilDueText(task.dueDate)}</span>`
+            : '';
         return `
             <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
                 <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${task.completed ? 'checked' : ''}>
@@ -532,6 +535,7 @@ class TaskManager {
                     </div>
                 </div>
                 <div class="task-status ${status}">${status}</div>
+                ${dueBadge}
             </div>
         `;
     }

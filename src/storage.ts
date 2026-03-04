@@ -861,3 +861,14 @@ export class StorageManager {
 // Initialize global storage manager
 const storage = new StorageManager();
 export { storage, STORAGE_VERSION, STORAGE_KEY };
+
+export function getDaysUntilDueText(dueDate: string): string {
+    const todayStr = storage.formatDate(new Date());
+    const todayMs = new Date(todayStr + 'T00:00:00').getTime();
+    const dueMs = new Date(dueDate + 'T00:00:00').getTime();
+    const days = Math.round((dueMs - todayMs) / (1000 * 60 * 60 * 24));
+    if (days < 0) return 'Overdue';
+    if (days === 0) return 'Today';
+    if (days === 1) return '1 day';
+    return `${days} days`;
+}
