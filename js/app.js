@@ -14,6 +14,7 @@ class TaskManager {
         this.dragSrcWishId = null;
         this.selectedDate = new Date();
         this.tasksExpanded = false;
+        this.hideCompleted = false;
         this.emojis = [
             // Activity
             '💪', '🏃', '🚴', '🏊', '🧘', '💃', '🕺', '⛹️',
@@ -67,6 +68,7 @@ class TaskManager {
         document.getElementById('statusFilter').addEventListener('change', () => this.filterTasks());
         document.getElementById('groupBySelect').addEventListener('change', () => this.filterTasks());
         document.getElementById('searchTasks').addEventListener('input', () => this.filterTasks());
+        document.getElementById('hideCompletedBtn').addEventListener('click', () => this.toggleHideCompleted());
         // Projects section
         document.getElementById('addProjectBtn').addEventListener('click', () => this.openProjectModal());
         document.getElementById('projectForm').addEventListener('submit', (e) => this.saveProject(e));
@@ -371,6 +373,13 @@ class TaskManager {
     }
     // ========================
     // Tasks Management
+    toggleHideCompleted() {
+        this.hideCompleted = !this.hideCompleted;
+        const btn = document.getElementById('hideCompletedBtn');
+        btn.textContent = this.hideCompleted ? '👁 Show Completed' : '👁 Hide Completed';
+        btn.classList.toggle('active', this.hideCompleted);
+        this.filterTasks();
+    }
     // ========================
     toggleTaskView() {
         this.tasksExpanded = !this.tasksExpanded;
@@ -391,6 +400,9 @@ class TaskManager {
         const today = this.getSelectedDateStr();
         const filtersActive = statusFilter || searchTerm;
         let filtered = tasks.filter(task => {
+            // Hide completed filter
+            if (this.hideCompleted && task.completed)
+                return false;
             // Category filter
             if (categoryFilter && task.category !== categoryFilter)
                 return false;

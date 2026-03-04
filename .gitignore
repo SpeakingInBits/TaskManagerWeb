@@ -5,6 +5,7 @@ node_modules/
 js/*.js
 js/*.js.map
 js/*.d.ts
+js/*.d.ts.map
 
 # Playwright
 test-results/
