@@ -506,6 +506,7 @@ html, body {
     border-radius: 0.375rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    position: relative;
 }
 
 .task-item:hover {
@@ -595,6 +596,22 @@ html, body {
 .task-status.overdue {
     color: var(--danger-color);
     font-weight: 600;
+}
+
+.task-due-badge {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--primary-color);
+    color: white;
+}
+
+.task-list.expanded .task-due-badge {
+    display: none;
 }
 
 /* ========================

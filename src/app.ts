@@ -2,7 +2,7 @@
 // Main Application Logic
 // ========================
 
-import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem, WishItem } from './storage.js';
+import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem, WishItem, getDaysUntilDueText } from './storage.js';
 
 interface Activity {
     type: string;
@@ -595,6 +595,10 @@ class TaskManager {
             status = 'overdue';
         }
 
+        const dueBadge = task.dueDate && !task.completed
+            ? `<span class="task-due-badge">${getDaysUntilDueText(task.dueDate)}</span>`
+            : '';
+
         return `
             <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
                 <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${task.completed ? 'checked' : ''}>
@@ -610,6 +614,7 @@ class TaskManager {
                     </div>
                 </div>
                 <div class="task-status ${status}">${status}</div>
+                ${dueBadge}
             </div>
         `;
     }
