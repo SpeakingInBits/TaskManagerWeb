@@ -1060,6 +1060,15 @@ html, body {
     background: #d1d5db;
 }
 
+.btn-secondary.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-secondary.active:hover {
+    background: #2563eb;
+}
+
 .btn-danger {
     background: var(--danger-color);
     color: white;
