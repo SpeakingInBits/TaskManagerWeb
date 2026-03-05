@@ -1780,14 +1780,16 @@ class TaskManager {
         });
     }
     renderNoteItem(note) {
-        const preview = note.content.length > 120
+        const rawPreview = note.content.length > 120
             ? note.content.substring(0, 120) + '…'
             : note.content;
+        const title = this.escapeHtml(note.title || 'Untitled');
+        const preview = rawPreview ? this.escapeHtml(rawPreview) : '<em>No content</em>';
         const date = new Date(note.updatedDate ?? note.createdDate).toLocaleDateString();
         return `
             <div class="note-item" data-note-id="${note.id}">
-                <div class="note-item-title">${note.title || 'Untitled'}</div>
-                <div class="note-item-preview">${preview || '<em>No content</em>'}</div>
+                <div class="note-item-title">${title}</div>
+                <div class="note-item-preview">${preview}</div>
                 <div class="note-item-date">${date}</div>
             </div>
         `;
