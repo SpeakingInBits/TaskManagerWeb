@@ -623,6 +623,57 @@ describe('StorageManager', () => {
             expect(storage.getTasks().length).toBe(0);
         });
     });
+
+    // ========================
+    // Note Management
+    // ========================
+    describe('note management', () => {
+        it('should add a note', () => {
+            const note = storage.addNote({ title: 'Shopping list', content: 'Milk, eggs' });
+            expect(note.id).toBeDefined();
+            expect(note.title).toBe('Shopping list');
+            expect(note.content).toBe('Milk, eggs');
+            expect(note.createdDate).toBeDefined();
+        });
+
+        it('should set default values for note fields', () => {
+            const note = storage.addNote({});
+            expect(note.title).toBe('');
+            expect(note.content).toBe('');
+        });
+
+        it('should get all notes sorted by most recently updated', () => {
+            const a = storage.addNote({ title: 'Note A', content: 'A' });
+            const b = storage.addNote({ title: 'Note B', content: 'B' });
+            storage.updateNote(a.id, { content: 'A updated' });
+            const notes = storage.getNotes();
+            expect(notes[0].id).toBe(a.id);
+            expect(notes[1].id).toBe(b.id);
+        });
+
+        it('should update a note and set updatedDate', () => {
+            const note = storage.addNote({ title: 'Old', content: 'Old content' });
+            const updated = storage.updateNote(note.id, { title: 'New', content: 'New content' });
+            expect(updated?.title).toBe('New');
+            expect(updated?.content).toBe('New content');
+            expect(updated?.updatedDate).toBeDefined();
+        });
+
+        it('should return undefined when updating non-existent note', () => {
+            const result = storage.updateNote('nonexistent', { title: 'Test' });
+            expect(result).toBeUndefined();
+        });
+
+        it('should delete a note', () => {
+            const note = storage.addNote({ title: 'To delete', content: '' });
+            storage.deleteNote(note.id);
+            expect(storage.getNotes().length).toBe(0);
+        });
+
+        it('should return empty array when no notes exist', () => {
+            expect(storage.getNotes()).toEqual([]);
+        });
+    });
 });
 
 // ========================

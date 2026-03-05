@@ -11,6 +11,7 @@ class TaskManager {
         this.currentEditingFinanceType = null;
         this.currentEditingRewardId = null;
         this.currentEditingWishItemId = null;
+        this.currentEditingNoteId = null;
         this.dragSrcWishId = null;
         this.selectedDate = new Date();
         this.tasksExpanded = false;
@@ -112,6 +113,11 @@ class TaskManager {
         document.getElementById('wishItemForm').addEventListener('submit', (e) => this.saveWishItem(e));
         document.getElementById('cancelWishItemBtn').addEventListener('click', () => this.closeWishItemModal());
         document.getElementById('deleteWishItemBtn').addEventListener('click', () => this.deleteWishItem());
+        // Notes section
+        document.getElementById('addNoteBtn').addEventListener('click', () => this.openNoteModal());
+        document.getElementById('noteForm').addEventListener('submit', (e) => this.saveNote(e));
+        document.getElementById('cancelNoteBtn').addEventListener('click', () => this.closeNoteModal());
+        document.getElementById('deleteNoteBtn').addEventListener('click', () => this.deleteNote());
         // Modal close buttons
         document.querySelectorAll('.close-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -222,6 +228,9 @@ class TaskManager {
         }
         else if (tabName === 'wishlist') {
             this.renderWishList();
+        }
+        else if (tabName === 'notes') {
+            this.renderNotes();
         }
         else if (tabName === 'settings') {
             this.renderSettings();
@@ -1750,6 +1759,80 @@ class TaskManager {
                 storage.deleteWishItem(this.currentEditingWishItemId);
                 this.closeWishItemModal();
                 this.renderWishList();
+            }
+        }
+    }
+    // ========================
+    // Notes
+    // ========================
+    renderNotes() {
+        const notes = storage.getNotes();
+        const container = document.getElementById('notesList');
+        if (notes.length === 0) {
+            container.innerHTML = '<p class="empty-state">No notes yet. Add one to get started!</p>';
+            return;
+        }
+        container.innerHTML = notes.map(note => this.renderNoteItem(note)).join('');
+        container.querySelectorAll('.note-item').forEach(el => {
+            el.addEventListener('click', () => {
+                this.openNoteModal(el.dataset.noteId);
+            });
+        });
+    }
+    renderNoteItem(note) {
+        const preview = note.content.length > 120
+            ? note.content.substring(0, 120) + '…'
+            : note.content;
+        const date = new Date(note.updatedDate ?? note.createdDate).toLocaleDateString();
+        return `
+            <div class="note-item" data-note-id="${note.id}">
+                <div class="note-item-title">${note.title || 'Untitled'}</div>
+                <div class="note-item-preview">${preview || '<em>No content</em>'}</div>
+                <div class="note-item-date">${date}</div>
+            </div>
+        `;
+    }
+    openNoteModal(noteId = null) {
+        this.currentEditingNoteId = noteId;
+        const modal = document.getElementById('noteModal');
+        const form = document.getElementById('noteForm');
+        const deleteBtn = document.getElementById('deleteNoteBtn');
+        form.reset();
+        deleteBtn.style.display = 'none';
+        document.getElementById('noteModalTitle').textContent = noteId ? 'Edit Note' : 'Add Note';
+        if (noteId) {
+            const note = storage.getNotes().find(n => n.id === noteId);
+            if (note) {
+                document.getElementById('noteTitle').value = note.title;
+                document.getElementById('noteContent').value = note.content;
+                deleteBtn.style.display = 'block';
+            }
+        }
+        modal.classList.add('active');
+    }
+    closeNoteModal() {
+        document.getElementById('noteModal').classList.remove('active');
+        this.currentEditingNoteId = null;
+    }
+    saveNote(e) {
+        e.preventDefault();
+        const title = document.getElementById('noteTitle').value.trim();
+        const content = document.getElementById('noteContent').value.trim();
+        if (this.currentEditingNoteId) {
+            storage.updateNote(this.currentEditingNoteId, { title, content });
+        }
+        else {
+            storage.addNote({ title, content });
+        }
+        this.closeNoteModal();
+        this.renderNotes();
+    }
+    deleteNote() {
+        if (this.currentEditingNoteId) {
+            if (confirm('Are you sure you want to delete this note?')) {
+                storage.deleteNote(this.currentEditingNoteId);
+                this.closeNoteModal();
+                this.renderNotes();
             }
         }
     }

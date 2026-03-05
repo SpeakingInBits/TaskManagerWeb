@@ -96,6 +96,14 @@ export interface WishItem {
     createdDate: string;
 }
 
+export interface Note {
+    id: string;
+    title: string;
+    content: string;
+    createdDate: string;
+    updatedDate?: string;
+}
+
 export interface PointsBreakdown {
     tasks: number;
     projects: number;
@@ -133,6 +141,7 @@ export interface AppData {
     userStats: UserStats;
     settings: Settings;
     wishList: WishItem[];
+    notes: Note[];
 }
 
 export interface PurchaseResult {
@@ -183,7 +192,8 @@ export class StorageManager {
             settings: {
                 tasksPerLevel: 30
             },
-            wishList: []
+            wishList: [],
+            notes: []
         };
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
@@ -664,6 +674,48 @@ export class StorageManager {
             if (item) item.order = idx;
         });
         this.saveData(data);
+    }
+
+    // Note Management
+    addNote(note: Partial<Note>): Note {
+        const data = this.getData();
+        if (!data.notes) data.notes = [];
+        const newNote: Note = {
+            id: this.generateId(),
+            title: note.title || '',
+            content: note.content || '',
+            createdDate: new Date().toISOString(),
+        };
+        data.notes.push(newNote);
+        this.saveData(data);
+        return newNote;
+    }
+
+    updateNote(noteId: string, updates: Partial<Note>): Note | undefined {
+        const data = this.getData();
+        if (!data.notes) data.notes = [];
+        const note = data.notes.find(n => n.id === noteId);
+        if (note) {
+            Object.assign(note, updates);
+            note.updatedDate = new Date().toISOString();
+            this.saveData(data);
+        }
+        return note;
+    }
+
+    deleteNote(noteId: string): void {
+        const data = this.getData();
+        if (!data.notes) data.notes = [];
+        data.notes = data.notes.filter(n => n.id !== noteId);
+        this.saveData(data);
+    }
+
+    getNotes(): Note[] {
+        const data = this.getData();
+        if (!data.notes) return [];
+        return data.notes.slice().sort((a, b) =>
+            new Date(b.updatedDate ?? b.createdDate).getTime() - new Date(a.updatedDate ?? a.createdDate).getTime()
+        );
     }
 
     // Points Management
