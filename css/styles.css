@@ -1593,3 +1593,69 @@ html, body {
 .wish-item-url:hover {
     text-decoration: underline;
 }
+
+/* ========================
+   Notes
+   ======================== */
+.notes-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.notes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.notes-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.note-item {
+    background: #fff;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-height: 100px;
+}
+
+.note-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.note-item-title {
+    font-weight: 600;
+    font-size: 1rem;
+    word-break: break-word;
+}
+
+.note-item-preview {
+    font-size: 0.875rem;
+    color: #555;
+    flex: 1;
+    overflow: hidden;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.note-item-date {
+    font-size: 0.75rem;
+    color: #999;
+    margin-top: auto;
+}
+
+#noteContent {
+    width: 100%;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
