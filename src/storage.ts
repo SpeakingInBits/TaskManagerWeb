@@ -94,6 +94,7 @@ export interface WishItem {
     price?: number;
     order: number;
     createdDate: string;
+    completed?: boolean;
 }
 
 export interface Note {

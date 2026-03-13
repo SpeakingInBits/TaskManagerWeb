@@ -1686,6 +1686,12 @@ class TaskManager {
                 }
                 this.dragSrcWishId = null;
             });
+            el.querySelector('.wish-item-checkbox').addEventListener('change', (e) => {
+                e.stopPropagation();
+                const checkbox = e.target;
+                storage.updateWishItem(el.dataset.wishId, { completed: checkbox.checked });
+                el.classList.toggle('completed', checkbox.checked);
+            });
             el.querySelector('.edit-wish-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.openWishItemModal(el.dataset.wishId);
@@ -1699,9 +1705,12 @@ class TaskManager {
         const urlStr = item.url
             ? `<a class="wish-item-url" href="${item.url}" target="_blank" rel="noopener noreferrer">🔗 View Listing</a>`
             : '';
+        const completedClass = item.completed ? ' completed' : '';
+        const checkedAttr = item.completed ? ' checked' : '';
         return `
-            <div class="wish-item" data-wish-id="${item.id}" draggable="true">
+            <div class="wish-item${completedClass}" data-wish-id="${item.id}" draggable="true">
                 <span class="wish-drag-handle" title="Drag to reorder">⠿</span>
+                <input type="checkbox" class="wish-item-checkbox" title="Mark as received"${checkedAttr}>
                 <div class="wish-item-content">
                     <div class="wish-item-title">${item.title}</div>
                     <div class="wish-item-meta">
