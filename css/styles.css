@@ -1594,6 +1594,23 @@ html, body {
     text-decoration: underline;
 }
 
+.wish-item-checkbox {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--primary-color, #4CAF50);
+}
+
+.wish-item.completed .wish-item-title {
+    text-decoration: line-through;
+    color: #aaa;
+}
+
+.wish-item.completed {
+    opacity: 0.7;
+}
+
 /* ========================
    Notes
    ======================== */

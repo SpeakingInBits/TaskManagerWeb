@@ -600,6 +600,15 @@ describe('StorageManager', () => {
             expect(items[1].order).toBe(1);
         });
 
+        it('should toggle completed on a wish item', () => {
+            const item = storage.addWishItem({ title: 'Headphones' });
+            expect(item.completed).toBeUndefined();
+            const checked = storage.updateWishItem(item.id, { completed: true });
+            expect(checked?.completed).toBe(true);
+            const unchecked = storage.updateWishItem(item.id, { completed: false });
+            expect(unchecked?.completed).toBe(false);
+        });
+
         it('should reorder wish items', () => {
             const a = storage.addWishItem({ title: 'Item A' });
             const b = storage.addWishItem({ title: 'Item B' });
