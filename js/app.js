@@ -103,6 +103,8 @@ class TaskManager {
         // Finance filters
         document.getElementById('filterFinancesBtn').addEventListener('click', () => this.renderFinances());
         document.getElementById('resetFinanceFilterBtn').addEventListener('click', () => this.resetFinanceFilter());
+        document.getElementById('prevMonthBtn').addEventListener('click', () => this.navigateToPrevMonth());
+        document.getElementById('nextMonthBtn').addEventListener('click', () => this.navigateToNextMonth());
         // Shop section
         document.getElementById('addRewardBtn').addEventListener('click', () => this.openRewardModal());
         document.getElementById('rewardForm').addEventListener('submit', (e) => this.saveReward(e));
@@ -1285,6 +1287,24 @@ class TaskManager {
     }
     resetFinanceFilter() {
         this.initializeFinanceDateFilter();
+        this.renderFinances();
+    }
+    navigateToPrevMonth() {
+        const startInput = document.getElementById('financeStartDate');
+        const base = startInput.value ? new Date(startInput.value + 'T00:00:00') : new Date();
+        const firstDay = new Date(base.getFullYear(), base.getMonth() - 1, 1);
+        const lastDay = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0);
+        startInput.valueAsDate = firstDay;
+        document.getElementById('financeEndDate').valueAsDate = lastDay;
+        this.renderFinances();
+    }
+    navigateToNextMonth() {
+        const startInput = document.getElementById('financeStartDate');
+        const base = startInput.value ? new Date(startInput.value + 'T00:00:00') : new Date();
+        const firstDay = new Date(base.getFullYear(), base.getMonth() + 1, 1);
+        const lastDay = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0);
+        startInput.valueAsDate = firstDay;
+        document.getElementById('financeEndDate').valueAsDate = lastDay;
         this.renderFinances();
     }
     getFinanceDateRange() {
