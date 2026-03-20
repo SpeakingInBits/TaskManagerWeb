@@ -151,6 +151,13 @@ export interface PurchaseResult {
     purchase?: Purchase;
 }
 
+export interface ValidationResult {
+    isValid: boolean;
+    hasPartialData: boolean;
+    issues: string[];
+    parsed: Partial<AppData> | null;
+}
+
 export class StorageManager {
     constructor() {
         this.initializeStorage();
@@ -792,6 +799,97 @@ export class StorageManager {
             return false;
         } catch (e) {
             console.error('Import error:', e);
+            return false;
+        }
+    }
+
+    validateImportData(jsonString: string): ValidationResult {
+        try {
+            const data = JSON.parse(jsonString) as Partial<AppData>;
+            const issues: string[] = [];
+
+            if (!data.version) issues.push('Missing version field');
+            if (data.tasks === undefined) issues.push('Missing tasks field');
+            else if (!Array.isArray(data.tasks)) issues.push('Tasks is not an array');
+            if (data.projects === undefined) issues.push('Missing projects field');
+            else if (!Array.isArray(data.projects)) issues.push('Projects is not an array');
+
+            const isValid = issues.length === 0;
+            const hasPartialData = !isValid && typeof data === 'object' && data !== null &&
+                (data.tasks !== undefined || data.projects !== undefined || data.version !== undefined ||
+                 data.habits !== undefined || data.userStats !== undefined || data.settings !== undefined);
+
+            return { isValid, hasPartialData, issues, parsed: data };
+        } catch (e) {
+            return { isValid: false, hasPartialData: false, issues: ['Invalid JSON format'], parsed: null };
+        }
+    }
+
+    private buildMigratedData(data: Partial<AppData>): AppData {
+        const now = new Date().toISOString();
+
+        // Handle category migration (old per-type structure → flat array)
+        let categories: string[];
+        if (data.categories && !Array.isArray(data.categories)) {
+            const catObj = data.categories as unknown as Record<string, string[]>;
+            categories = [...new Set([
+                ...(catObj['tasks'] || []),
+                ...(catObj['habits'] || []),
+                ...(catObj['finance'] || [])
+            ])];
+        } else if (Array.isArray(data.categories) && data.categories.length > 0) {
+            categories = data.categories;
+        } else {
+            categories = ['Work', 'Personal', 'Home', 'Shopping', 'Health', 'Fitness', 'Learning',
+                'Productivity', 'Food', 'Transportation', 'Entertainment', 'Utilities', 'Income'];
+        }
+
+        return {
+            version: STORAGE_VERSION,
+            schemaVersion: DATA_SCHEMA_VERSION,
+            lastUpdated: now,
+            tasks: Array.isArray(data.tasks) ? data.tasks : [],
+            projects: Array.isArray(data.projects) ? data.projects : [],
+            habits: Array.isArray(data.habits) ? data.habits : [],
+            dailyHabitLogs: Array.isArray(data.dailyHabitLogs) ? data.dailyHabitLogs : [],
+            expenses: Array.isArray(data.expenses) ? data.expenses : [],
+            revenue: Array.isArray(data.revenue) ? data.revenue : [],
+            charges: Array.isArray(data.charges) ? data.charges : [],
+            rewards: Array.isArray(data.rewards) ? data.rewards : [],
+            purchaseHistory: Array.isArray(data.purchaseHistory) ? data.purchaseHistory : [],
+            categories,
+            userStats: data.userStats || {
+                totalPoints: 0,
+                level: 1,
+                dailyStreak: 0,
+                lastActivityDate: null,
+                pointsBreakdown: { tasks: 0, projects: 0, habits: 0, streakBonus: 0 }
+            },
+            settings: data.settings || { tasksPerLevel: 30 },
+            wishList: Array.isArray(data.wishList) ? data.wishList : [],
+            notes: Array.isArray(data.notes) ? data.notes : [],
+        };
+    }
+
+    migrateAndImport(data: Partial<AppData>): boolean {
+        try {
+            const migrated = this.buildMigratedData(data);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+            return true;
+        } catch (e) {
+            console.error('Migration error:', e);
+            return false;
+        }
+    }
+
+    migrateToLatest(): boolean {
+        try {
+            const data = this.getData();
+            const migrated = this.buildMigratedData(data);
+            this.saveData(migrated);
+            return true;
+        } catch (e) {
+            console.error('Migration error:', e);
             return false;
         }
     }

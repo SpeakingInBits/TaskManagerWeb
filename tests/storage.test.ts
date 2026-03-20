@@ -526,6 +526,146 @@ describe('StorageManager', () => {
     });
 
     // ========================
+    // validateImportData
+    // ========================
+    describe('validateImportData', () => {
+        it('should return isValid true for fully valid data', () => {
+            const data = {
+                version: '1.0.0',
+                tasks: [],
+                projects: [],
+            };
+            const result = storage.validateImportData(JSON.stringify(data));
+            expect(result.isValid).toBe(true);
+            expect(result.hasPartialData).toBe(false);
+            expect(result.issues).toHaveLength(0);
+            expect(result.parsed).not.toBeNull();
+        });
+
+        it('should flag missing version as invalid with partial data', () => {
+            const data = { tasks: [], projects: [] };
+            const result = storage.validateImportData(JSON.stringify(data));
+            expect(result.isValid).toBe(false);
+            expect(result.hasPartialData).toBe(true);
+            expect(result.issues).toContain('Missing version field');
+        });
+
+        it('should flag missing tasks as invalid with partial data', () => {
+            const data = { version: '1.0.0', projects: [] };
+            const result = storage.validateImportData(JSON.stringify(data));
+            expect(result.isValid).toBe(false);
+            expect(result.hasPartialData).toBe(true);
+            expect(result.issues).toContain('Missing tasks field');
+        });
+
+        it('should flag missing projects as invalid with partial data', () => {
+            const data = { version: '1.0.0', tasks: [] };
+            const result = storage.validateImportData(JSON.stringify(data));
+            expect(result.isValid).toBe(false);
+            expect(result.hasPartialData).toBe(true);
+            expect(result.issues).toContain('Missing projects field');
+        });
+
+        it('should return invalid and no partial data for completely unrecognized object', () => {
+            const data = { foo: 'bar' };
+            const result = storage.validateImportData(JSON.stringify(data));
+            expect(result.isValid).toBe(false);
+            expect(result.hasPartialData).toBe(false);
+        });
+
+        it('should return invalid for malformed JSON', () => {
+            const result = storage.validateImportData('not json');
+            expect(result.isValid).toBe(false);
+            expect(result.hasPartialData).toBe(false);
+            expect(result.issues).toContain('Invalid JSON format');
+            expect(result.parsed).toBeNull();
+        });
+
+        it('should flag non-array tasks as invalid', () => {
+            const data = { version: '1.0.0', tasks: 'oops', projects: [] };
+            const result = storage.validateImportData(JSON.stringify(data));
+            expect(result.isValid).toBe(false);
+            expect(result.issues).toContain('Tasks is not an array');
+        });
+    });
+
+    // ========================
+    // migrateAndImport
+    // ========================
+    describe('migrateAndImport', () => {
+        it('should import and fill in missing fields with defaults', () => {
+            const partial = { tasks: [{ id: '1', title: 'Task', completed: false }] };
+            const result = storage.migrateAndImport(partial);
+            expect(result).toBe(true);
+            const data = storage.getData();
+            expect(data.version).toBe('1.0.0');
+            expect(data.tasks).toHaveLength(1);
+            expect(Array.isArray(data.projects)).toBe(true);
+            expect(Array.isArray(data.habits)).toBe(true);
+            expect(data.settings.tasksPerLevel).toBe(30);
+        });
+
+        it('should migrate old per-type category structure to flat array', () => {
+            const partial = {
+                tasks: [],
+                projects: [],
+                categories: { tasks: ['Work', 'Personal'], habits: ['Fitness'], finance: ['Income'] }
+            };
+            const result = storage.migrateAndImport(partial as any);
+            expect(result).toBe(true);
+            const categories = storage.getCategories();
+            expect(categories).toContain('Work');
+            expect(categories).toContain('Fitness');
+            expect(categories).toContain('Income');
+        });
+
+        it('should preserve existing array categories', () => {
+            const partial = {
+                tasks: [],
+                projects: [],
+                categories: ['Custom1', 'Custom2']
+            };
+            const result = storage.migrateAndImport(partial);
+            expect(result).toBe(true);
+            const categories = storage.getCategories();
+            expect(categories).toContain('Custom1');
+            expect(categories).toContain('Custom2');
+        });
+    });
+
+    // ========================
+    // migrateToLatest
+    // ========================
+    describe('migrateToLatest', () => {
+        it('should return true and keep valid data intact', () => {
+            storage.addTask({ title: 'Keep me' });
+            const result = storage.migrateToLatest();
+            expect(result).toBe(true);
+            expect(storage.getTasks()).toHaveLength(1);
+            expect(storage.getTasks()[0].title).toBe('Keep me');
+        });
+
+        it('should update the version to latest', () => {
+            const result = storage.migrateToLatest();
+            expect(result).toBe(true);
+            expect(storage.getData().version).toBe('1.0.0');
+        });
+
+        it('should add missing fields when migrating stored data', () => {
+            // Simulate stored data missing the notes field
+            const rawData = JSON.parse(localStorage.getItem('taskManagerData')!);
+            delete rawData.notes;
+            delete rawData.wishList;
+            localStorage.setItem('taskManagerData', JSON.stringify(rawData));
+
+            const result = storage.migrateToLatest();
+            expect(result).toBe(true);
+            expect(Array.isArray(storage.getData().notes)).toBe(true);
+            expect(Array.isArray(storage.getData().wishList)).toBe(true);
+        });
+    });
+
+    // ========================
     // Utility Methods
     // ========================
     describe('utility methods', () => {
