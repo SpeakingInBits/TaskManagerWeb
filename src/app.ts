@@ -4,6 +4,8 @@
 
 import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem, WishItem, Note, getDaysUntilDueText } from './storage.js';
 
+const FILTER_SETTINGS_KEY = 'taskManagerFilterSettings';
+
 interface Activity {
     type: string;
     message: string;
@@ -59,6 +61,7 @@ class TaskManager {
         this.setupEventListeners();
         this.initializeFinanceDateFilter();
         this.updateDateNavigator();
+        this.loadFilterSettings();
         this.render();
         this.processRecurringTasks();
     }
@@ -82,11 +85,12 @@ class TaskManager {
         document.getElementById('taskCategory')!.addEventListener('change', (e) => this.handleCategoryChange('task', (e.target as HTMLSelectElement).value));
         document.getElementById('taskCategorySave')!.addEventListener('click', () => this.handleAddCategory('task'));
         document.getElementById('taskCategoryCancel')!.addEventListener('click', () => this.cancelAddCategory('task'));
-        document.getElementById('categoryFilter')!.addEventListener('change', () => this.filterTasks());
-        document.getElementById('statusFilter')!.addEventListener('change', () => this.filterTasks());
-        document.getElementById('groupBySelect')!.addEventListener('change', () => this.filterTasks());
+        document.getElementById('categoryFilter')!.addEventListener('change', () => { this.filterTasks(); this.saveFilterSettings(); });
+        document.getElementById('statusFilter')!.addEventListener('change', () => { this.filterTasks(); this.saveFilterSettings(); });
+        document.getElementById('groupBySelect')!.addEventListener('change', () => { this.filterTasks(); this.saveFilterSettings(); });
         document.getElementById('searchTasks')!.addEventListener('input', () => this.filterTasks());
         document.getElementById('hideCompletedBtn')!.addEventListener('click', () => this.toggleHideCompleted());
+        document.getElementById('resetFiltersBtn')!.addEventListener('click', () => this.resetFilters());
 
         // Projects section
         document.getElementById('addProjectBtn')!.addEventListener('click', () => this.openProjectModal());
@@ -207,6 +211,7 @@ class TaskManager {
         document.getElementById('todayTasksItem')!.addEventListener('click', () => this.switchTab('tasks'));
         document.getElementById('overdueTasksItem')!.addEventListener('click', () => {
             (document.getElementById('statusFilter') as HTMLSelectElement).value = 'overdue';
+            this.saveFilterSettings();
             this.switchTab('tasks');
         });
 
@@ -432,9 +437,53 @@ class TaskManager {
     // Tasks Management
     toggleHideCompleted(): void {
         this.hideCompleted = !this.hideCompleted;
+        this.updateHideCompletedBtn();
+        this.filterTasks();
+        this.saveFilterSettings();
+    }
+
+    updateHideCompletedBtn(): void {
         const btn = document.getElementById('hideCompletedBtn')!;
         btn.textContent = this.hideCompleted ? '👁 Show Completed' : '👁 Hide Completed';
         btn.classList.toggle('active', this.hideCompleted);
+    }
+
+    saveFilterSettings(): void {
+        const categoryFilter = (document.getElementById('categoryFilter') as HTMLSelectElement).value;
+        const statusFilter = (document.getElementById('statusFilter') as HTMLSelectElement).value;
+        const groupBy = (document.getElementById('groupBySelect') as HTMLSelectElement).value;
+        const settings = { categoryFilter, statusFilter, groupBy, hideCompleted: this.hideCompleted };
+        localStorage.setItem(FILTER_SETTINGS_KEY, JSON.stringify(settings));
+    }
+
+    loadFilterSettings(): void {
+        const raw = localStorage.getItem(FILTER_SETTINGS_KEY);
+        if (!raw) return;
+        try {
+            const settings = JSON.parse(raw);
+            const categoryFilter = document.getElementById('categoryFilter') as HTMLSelectElement;
+            const statusFilter = document.getElementById('statusFilter') as HTMLSelectElement;
+            const groupBySelect = document.getElementById('groupBySelect') as HTMLSelectElement;
+            if (settings.categoryFilter !== undefined) categoryFilter.value = settings.categoryFilter;
+            if (settings.statusFilter !== undefined) statusFilter.value = settings.statusFilter;
+            if (settings.groupBy !== undefined) groupBySelect.value = settings.groupBy;
+            if (settings.hideCompleted) {
+                this.hideCompleted = true;
+                this.updateHideCompletedBtn();
+            }
+        } catch {
+            localStorage.removeItem(FILTER_SETTINGS_KEY);
+        }
+    }
+
+    resetFilters(): void {
+        (document.getElementById('categoryFilter') as HTMLSelectElement).value = '';
+        (document.getElementById('statusFilter') as HTMLSelectElement).value = '';
+        (document.getElementById('groupBySelect') as HTMLSelectElement).value = '';
+        (document.getElementById('searchTasks') as HTMLInputElement).value = '';
+        this.hideCompleted = false;
+        this.updateHideCompletedBtn();
+        localStorage.removeItem(FILTER_SETTINGS_KEY);
         this.filterTasks();
     }
 

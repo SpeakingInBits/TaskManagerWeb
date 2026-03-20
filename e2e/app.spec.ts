@@ -451,4 +451,68 @@ test.describe('Task Manager App', () => {
             expect(value).toBe('50');
         });
     });
+
+    // ========================
+    // Filter Settings Persistence
+    // ========================
+    test.describe('filter settings persistence', () => {
+        test.beforeEach(async ({ page }) => {
+            await page.click('[data-tab="tasks"]');
+        });
+
+        test('should show the Reset Filters button', async ({ page }) => {
+            await expect(page.locator('#resetFiltersBtn')).toBeVisible();
+        });
+
+        test('should persist status filter across page reloads', async ({ page }) => {
+            await page.selectOption('#statusFilter', 'completed');
+            await page.reload();
+            await page.waitForSelector('.header');
+            await page.click('[data-tab="tasks"]');
+            const value = await page.locator('#statusFilter').inputValue();
+            expect(value).toBe('completed');
+        });
+
+        test('should persist groupBy filter across page reloads', async ({ page }) => {
+            await page.selectOption('#groupBySelect', 'priority');
+            await page.reload();
+            await page.waitForSelector('.header');
+            await page.click('[data-tab="tasks"]');
+            const value = await page.locator('#groupBySelect').inputValue();
+            expect(value).toBe('priority');
+        });
+
+        test('should persist hideCompleted state across page reloads', async ({ page }) => {
+            await page.click('#hideCompletedBtn');
+            await expect(page.locator('#hideCompletedBtn')).toContainText('Show Completed');
+            await page.reload();
+            await page.waitForSelector('.header');
+            await page.click('[data-tab="tasks"]');
+            await expect(page.locator('#hideCompletedBtn')).toContainText('Show Completed');
+        });
+
+        test('should reset all filters when Reset Filters is clicked', async ({ page }) => {
+            await page.selectOption('#statusFilter', 'pending');
+            await page.selectOption('#groupBySelect', 'category');
+            await page.click('#hideCompletedBtn');
+
+            await page.click('#resetFiltersBtn');
+
+            const statusValue = await page.locator('#statusFilter').inputValue();
+            const groupByValue = await page.locator('#groupBySelect').inputValue();
+            expect(statusValue).toBe('');
+            expect(groupByValue).toBe('');
+            await expect(page.locator('#hideCompletedBtn')).toContainText('Hide Completed');
+        });
+
+        test('should not restore filters after reset and reload', async ({ page }) => {
+            await page.selectOption('#statusFilter', 'pending');
+            await page.click('#resetFiltersBtn');
+            await page.reload();
+            await page.waitForSelector('.header');
+            await page.click('[data-tab="tasks"]');
+            const value = await page.locator('#statusFilter').inputValue();
+            expect(value).toBe('');
+        });
+    });
 });
