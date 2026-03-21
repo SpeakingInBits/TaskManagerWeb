@@ -1923,13 +1923,27 @@ class TaskManager {
 
             // Touch events for mobile drag and drop support
             let touchDragOverItem: HTMLElement | null = null;
-            el.addEventListener('touchstart', () => {
-                this.dragSrcWishId = el.dataset.wishId!;
-                el.classList.add('dragging');
-            }, { passive: false });
-            el.addEventListener('touchmove', (e) => {
-                e.preventDefault();
+            let touchDragActive = false;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            const DRAG_THRESHOLD = 10;
+            el.addEventListener('touchstart', (e) => {
                 const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                touchDragActive = false;
+            }, { passive: true });
+            el.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                const dx = touch.clientX - touchStartX;
+                const dy = touch.clientY - touchStartY;
+                if (!touchDragActive && (dx * dx + dy * dy) > DRAG_THRESHOLD * DRAG_THRESHOLD) {
+                    touchDragActive = true;
+                    this.dragSrcWishId = el.dataset.wishId!;
+                    el.classList.add('dragging');
+                }
+                if (!touchDragActive) return;
+                e.preventDefault();
                 // Temporarily hide the dragged element so elementFromPoint finds the element underneath
                 el.style.visibility = 'hidden';
                 const target = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -1942,6 +1956,10 @@ class TaskManager {
                 }
             }, { passive: false });
             el.addEventListener('touchend', (e) => {
+                if (!touchDragActive) {
+                    touchDragOverItem = null;
+                    return;
+                }
                 el.classList.remove('dragging');
                 touchDragOverItem?.classList.remove('drag-over');
                 const touch = e.changedTouches[0];
@@ -1951,6 +1969,7 @@ class TaskManager {
                 const targetItem = target?.closest<HTMLElement>('.wish-item');
                 const targetId = targetItem?.dataset.wishId;
                 touchDragOverItem = null;
+                touchDragActive = false;
                 if (this.dragSrcWishId && targetId && this.dragSrcWishId !== targetId) {
                     const allItems = storage.getWishItems();
                     const srcIdx = allItems.findIndex(i => i.id === this.dragSrcWishId);
