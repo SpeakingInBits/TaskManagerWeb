@@ -1,10 +1,8 @@
 # Dependencies
 node_modules/
 
-# TypeScript build output
-js/*.js
-js/*.js.map
-js/*.d.ts
+# TypeScript build output (compiled at deploy time, not committed)
+js/
 
 # Playwright
 test-results/
