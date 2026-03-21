@@ -167,6 +167,7 @@ class TaskManager {
                 location.reload();
             }
         });
+        document.getElementById('migrateBtn')!.addEventListener('click', () => this.migrateToLatest());
 
         // Modal backdrop click
         document.querySelectorAll('.modal').forEach(modal => {
@@ -2223,9 +2224,29 @@ class TaskManager {
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                if (storage.importData(event.target!.result as string)) {
-                    alert('Data imported successfully! Refreshing...');
-                    location.reload();
+                const jsonString = event.target!.result as string;
+                const validation = storage.validateImportData(jsonString);
+
+                if (validation.isValid) {
+                    if (storage.importData(jsonString)) {
+                        alert('Data imported successfully! Refreshing...');
+                        location.reload();
+                    } else {
+                        alert('Invalid file format. Please upload a valid Task Manager backup.');
+                    }
+                } else if (validation.hasPartialData && validation.parsed) {
+                    const issueList = validation.issues.join('\n  - ');
+                    const proceed = confirm(
+                        `Warning: The imported file has invalid or missing data:\n  - ${issueList}\n\nWould you like to migrate the valid data to the latest format? Missing fields will be set to defaults.`
+                    );
+                    if (proceed) {
+                        if (storage.migrateAndImport(validation.parsed)) {
+                            alert('Data migrated and imported successfully! Refreshing...');
+                            location.reload();
+                        } else {
+                            alert('Error during migration. Import cancelled.');
+                        }
+                    }
                 } else {
                     alert('Invalid file format. Please upload a valid Task Manager backup.');
                 }
@@ -2234,6 +2255,15 @@ class TaskManager {
             }
         };
         reader.readAsText(file);
+    }
+
+    migrateToLatest(): void {
+        if (storage.migrateToLatest()) {
+            alert('Data migrated to the latest version successfully!');
+            location.reload();
+        } else {
+            alert('An error occurred during migration. Please try again.');
+        }
     }
 
     // ========================
