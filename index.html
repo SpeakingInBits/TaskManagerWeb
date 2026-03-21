@@ -149,6 +149,7 @@
                         </select>
                         <input type="text" id="searchTasks" class="filter-input" placeholder="Search tasks...">
                         <button class="btn btn-secondary" id="hideCompletedBtn">👁 Hide Completed</button>
+                        <button class="btn btn-secondary" id="resetFiltersBtn">↺ Reset Filters</button>
                     </div>
 
                     <!-- Task List -->
@@ -476,12 +477,14 @@
 
                     <!-- Date Range Filter -->
                     <div class="filters" style="margin-bottom: 1rem;">
+                        <button class="btn btn-secondary" id="prevMonthBtn" style="margin-right: 0.5rem;">&#8249; Prev</button>
                         <label style="margin-right: 0.5rem;">From:</label>
                         <input type="date" id="financeStartDate" class="filter-input" style="width: auto;">
                         <label style="margin-left: 1rem; margin-right: 0.5rem;">To:</label>
                         <input type="date" id="financeEndDate" class="filter-input" style="width: auto;">
                         <button class="btn btn-secondary" id="filterFinancesBtn" style="margin-left: 0.5rem;">Apply</button>
                         <button class="btn btn-secondary" id="resetFinanceFilterBtn" style="margin-left: 0.5rem;">This Month</button>
+                        <button class="btn btn-secondary" id="nextMonthBtn" style="margin-left: 0.5rem;">Next &#8250;</button>
                     </div>
 
                     <!-- Tabs for Expenses, Revenue, Other Charges -->
