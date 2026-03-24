@@ -1533,7 +1533,7 @@ html, body {
     border: 1px solid var(--border-color, #e0e0e0);
     border-radius: 8px;
     padding: 1rem;
-    cursor: grab;
+    cursor: default;
     transition: box-shadow 0.2s, opacity 0.2s;
 }
 
