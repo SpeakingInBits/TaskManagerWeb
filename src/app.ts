@@ -1888,12 +1888,27 @@ class TaskManager {
         container.innerHTML = items.map(item => this.renderWishItem(item)).join('');
 
         container.querySelectorAll<HTMLElement>('.wish-item').forEach(el => {
+            const handle = el.querySelector<HTMLElement>('.wish-drag-handle');
+            if (!handle) return;
+
+            // Only enable dragging when the user mousedowns on the handle; reset on
+            // any mouseup anywhere in the document (covers releasing outside the handle)
+            handle.addEventListener('mousedown', () => {
+                el.setAttribute('draggable', 'true');
+                const resetDraggable = () => {
+                    el.setAttribute('draggable', 'false');
+                    document.removeEventListener('mouseup', resetDraggable);
+                };
+                document.addEventListener('mouseup', resetDraggable);
+            });
+
             el.addEventListener('dragstart', (e) => {
                 this.dragSrcWishId = el.dataset.wishId!;
                 el.classList.add('dragging');
                 e.dataTransfer!.effectAllowed = 'move';
             });
             el.addEventListener('dragend', () => {
+                el.setAttribute('draggable', 'false');
                 this.dragSrcWishId = null;
                 el.classList.remove('dragging');
                 container.querySelectorAll<HTMLElement>('.wish-item').forEach(i => i.classList.remove('drag-over'));
@@ -1924,6 +1939,7 @@ class TaskManager {
             // Touch events for mobile drag and drop support
             let touchDragOverItem: HTMLElement | null = null;
             let touchDragActive = false;
+            let touchStartedOnHandle = false;
             let touchStartX = 0;
             let touchStartY = 0;
             const DRAG_THRESHOLD = 10;
@@ -1932,12 +1948,13 @@ class TaskManager {
                 touchStartX = touch.clientX;
                 touchStartY = touch.clientY;
                 touchDragActive = false;
+                touchStartedOnHandle = !!(e.target as Element).closest('.wish-drag-handle');
             }, { passive: true });
             el.addEventListener('touchmove', (e) => {
                 const touch = e.touches[0];
                 const dx = touch.clientX - touchStartX;
                 const dy = touch.clientY - touchStartY;
-                if (!touchDragActive && (dx * dx + dy * dy) > DRAG_THRESHOLD * DRAG_THRESHOLD) {
+                if (!touchDragActive && touchStartedOnHandle && (dx * dx + dy * dy) > DRAG_THRESHOLD * DRAG_THRESHOLD) {
                     touchDragActive = true;
                     this.dragSrcWishId = el.dataset.wishId!;
                     el.classList.add('dragging');
@@ -2009,7 +2026,7 @@ class TaskManager {
         const completedClass = item.completed ? ' completed' : '';
         const checkedAttr = item.completed ? ' checked' : '';
         return `
-            <div class="wish-item${completedClass}" data-wish-id="${item.id}" draggable="true">
+            <div class="wish-item${completedClass}" data-wish-id="${item.id}" draggable="false">
                 <span class="wish-drag-handle" title="Drag to reorder">⠿</span>
                 <input type="checkbox" class="wish-item-checkbox" title="Mark as received"${checkedAttr}>
                 <div class="wish-item-content">
