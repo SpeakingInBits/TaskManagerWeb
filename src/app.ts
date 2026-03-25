@@ -965,13 +965,29 @@ class TaskManager {
         });
     }
 
+    normalizeColor(color: string | undefined): string {
+        const colorMap: Record<string, string> = {
+            blue: '#3b82f6',
+            red: '#ef4444',
+            green: '#10b981',
+            yellow: '#f59e0b',
+            purple: '#a855f7'
+        };
+        const defaultColor = '#3b82f6';
+        if (!color) return defaultColor;
+        const resolved = colorMap[color] || color;
+        return /^#[0-9a-fA-F]{3,6}$/.test(resolved) ? resolved : defaultColor;
+    }
+
     renderProjectCard(project: { id: string; name: string; description?: string; color?: string }): string {
         const tasks = storage.getTasks().filter(t => t.projectId === project.id);
         const completed = tasks.filter(t => t.completed).length;
         const percentage = tasks.length === 0 ? 0 : Math.round((completed / tasks.length) * 100);
 
+        const borderColor = this.normalizeColor(project.color);
+
         return `
-            <div class="project-card ${project.color || 'blue'}" data-project-id="${project.id}">
+            <div class="project-card" style="border-top-color: ${borderColor}" data-project-id="${project.id}">
                 <div class="project-title">${project.name}</div>
                 ${project.description ? `<div class="project-description">${project.description}</div>` : ''}
                 <div class="project-stats">
@@ -1009,7 +1025,7 @@ class TaskManager {
             if (project) {
                 (document.getElementById('projectName') as HTMLInputElement).value = project.name;
                 (document.getElementById('projectDescription') as HTMLTextAreaElement).value = project.description || '';
-                (document.getElementById('projectColor') as HTMLSelectElement).value = project.color || 'blue';
+                (document.getElementById('projectColor') as HTMLInputElement).value = this.normalizeColor(project.color || 'blue');
                 deleteBtn.style.display = 'block';
             }
         }
@@ -1028,7 +1044,7 @@ class TaskManager {
         const project = {
             name: (document.getElementById('projectName') as HTMLInputElement).value,
             description: (document.getElementById('projectDescription') as HTMLTextAreaElement).value,
-            color: (document.getElementById('projectColor') as HTMLSelectElement).value
+            color: (document.getElementById('projectColor') as HTMLInputElement).value
         };
 
         if (this.currentEditingProjectId) {

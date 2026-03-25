@@ -642,6 +642,7 @@ html, body {
 .project-card {
     background: white;
     border: 1px solid var(--border-color);
+    border-top: 4px solid #3b82f6;
     border-radius: 0.5rem;
     padding: 1.5rem;
     cursor: pointer;
