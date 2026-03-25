@@ -436,7 +436,6 @@
                         <div class="finance-buttons">
                             <button class="btn btn-success" id="addExpenseBtn">+ Add Expense</button>
                             <button class="btn btn-success" id="addRevenueBtn">+ Add Revenue</button>
-                            <button class="btn btn-primary" id="addChargeBtn">+ Add Other Charge</button>
                         </div>
                     </div>
 
@@ -468,11 +467,11 @@
                         <button class="btn btn-secondary" id="nextMonthBtn" style="margin-left: 0.5rem;">Next &#8250;</button>
                     </div>
 
-                    <!-- Tabs for Expenses, Revenue, Other Charges -->
+                    <!-- Tabs for Expenses, Revenue, Charts -->
                     <div class="finance-tabs">
                         <button class="finance-tab active" data-finance-tab="expenses">Expenses</button>
                         <button class="finance-tab" data-finance-tab="revenue">Revenue</button>
-                        <button class="finance-tab" data-finance-tab="charges">Other Charges</button>
+                        <button class="finance-tab" data-finance-tab="charts">Charts</button>
                     </div>
 
                     <!-- Expenses List -->
@@ -489,10 +488,17 @@
                         </div>
                     </div>
 
-                    <!-- Other Charges List -->
-                    <div class="finance-content" id="charges-content">
-                        <div class="finance-list" id="chargesList">
-                            <p class="empty-state">No charges yet. Add one to track other expenses!</p>
+                    <!-- Charts -->
+                    <div class="finance-content" id="charts-content">
+                        <div class="finance-charts">
+                            <div class="chart-section">
+                                <h3 class="chart-title">Expenses by Category</h3>
+                                <div id="expensePieChart" class="chart-container"></div>
+                            </div>
+                            <div class="chart-section">
+                                <h3 class="chart-title">Income &amp; Spending Flow</h3>
+                                <div id="sankeyChart" class="chart-container"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
