@@ -27,10 +27,6 @@
                 <h1>📋 Task Manager</h1>
                 <div class="header-stats">
                     <div class="stat">
-                        <span class="stat-label">Points</span>
-                        <span class="stat-value" id="totalPoints">0</span>
-                    </div>
-                    <div class="stat">
                         <span class="stat-label">Level</span>
                         <span class="stat-value" id="userLevel">1</span>
                         <span class="stat-sublabel" id="levelProgress" style="font-size: 0.7rem; color: #ccc; display: block; margin-top: -2px;">0/30 tasks</span>
@@ -64,7 +60,6 @@
             <button class="nav-tab" data-tab="tasks">✓ Tasks</button>
             <button class="nav-tab" data-tab="projects">📁 Projects</button>
             <button class="nav-tab" data-tab="habits">⭐ Habits</button>
-            <button class="nav-tab" data-tab="shop">🛒 Shop</button>
             <button class="nav-tab" data-tab="wishlist">🎁 Wish List</button>
             <button class="nav-tab" data-tab="notes">📝 Notes</button>
             <button class="nav-tab" data-tab="finances">💰 Finances</button>
@@ -202,10 +197,6 @@
                                         <option value="medium" selected>Medium</option>
                                         <option value="high">High</option>
                                     </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="taskPoints">Points Value</label>
-                                    <input type="number" id="taskPoints" min="1" value="10">
                                 </div>
                             </div>
                             <div class="form-group">
@@ -398,10 +389,6 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="habitPoints">Points Value</label>
-                                <input type="number" id="habitPoints" min="1" value="10">
-                            </div>
-                            <div class="form-group">
                                 <label for="habitTargetGoal">Daily Target Goal</label>
                                 <input type="number" id="habitTargetGoal" min="1" value="1" placeholder="e.g., 10 for 10 push-ups">
                                 <small style="color: #666; font-size: 0.85rem;">How many times should this habit be completed per day?</small>
@@ -556,62 +543,6 @@
                                 <button type="submit" class="btn btn-primary">Save</button>
                                 <button type="button" class="btn btn-secondary" id="deleteFinanceBtn" style="display: none;">Delete</button>
                                 <button type="button" class="btn btn-secondary" id="cancelFinanceBtn">Cancel</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Shop Tab -->
-            <section class="tab-content" id="shop-tab">
-                <div class="shop-container">
-                    <div class="shop-header">
-                        <h2>Reward Shop</h2>
-                        <button class="btn btn-primary" id="addRewardBtn">+ Add Reward</button>
-                    </div>
-
-                    <div class="shop-points-display" style="margin-bottom: 1.5rem; text-align: center;">
-                        <p style="font-size: 0.9rem; color: #666; margin: 0;">Available Points</p>
-                        <p style="font-size: 2rem; font-weight: bold; color: #4CAF50; margin: 0.5rem 0;" id="shopPointsDisplay">0</p>
-                    </div>
-
-                    <!-- Rewards List -->
-                    <div class="rewards-list" id="rewardsList">
-                        <p class="empty-state">No rewards yet. Add rewards to spend your points on!</p>
-                    </div>
-                </div>
-
-                <!-- Reward Modal -->
-                <div class="modal" id="rewardModal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3 id="rewardModalTitle">Add Reward</h3>
-                            <button class="close-btn">&times;</button>
-                        </div>
-                        <form id="rewardForm" class="reward-form">
-                            <div class="form-group">
-                                <label for="rewardName">Reward Name *</label>
-                                <input type="text" id="rewardName" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="rewardDescription">Description</label>
-                                <textarea id="rewardDescription" rows="3"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="rewardCost">Point Cost *</label>
-                                <input type="number" id="rewardCost" min="1" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="rewardRepeatable">Repeatable?</label>
-                                <select id="rewardRepeatable">
-                                    <option value="true" selected>Repeatable</option>
-                                    <option value="false">One-time</option>
-                                </select>
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary">Save Reward</button>
-                                <button type="button" class="btn btn-secondary" id="deleteRewardBtn" style="display: none;">Delete</button>
-                                <button type="button" class="btn btn-secondary" id="cancelRewardBtn">Cancel</button>
                             </div>
                         </form>
                     </div>

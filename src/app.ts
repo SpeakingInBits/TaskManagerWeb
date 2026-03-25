@@ -23,7 +23,6 @@ class TaskManager {
     currentEditingHabitId: string | null = null;
     currentEditingFinanceId: string | null = null;
     currentEditingFinanceType: string | null = null;
-    currentEditingRewardId: string | null = null;
     currentEditingWishItemId: string | null = null;
     currentEditingNoteId: string | null = null;
     dragSrcWishId: string | null = null;
@@ -131,12 +130,6 @@ class TaskManager {
         document.getElementById('resetFinanceFilterBtn')!.addEventListener('click', () => this.resetFinanceFilter());
         document.getElementById('prevMonthBtn')!.addEventListener('click', () => this.navigateToPrevMonth());
         document.getElementById('nextMonthBtn')!.addEventListener('click', () => this.navigateToNextMonth());
-
-        // Shop section
-        document.getElementById('addRewardBtn')!.addEventListener('click', () => this.openRewardModal());
-        document.getElementById('rewardForm')!.addEventListener('submit', (e) => this.saveReward(e));
-        document.getElementById('cancelRewardBtn')!.addEventListener('click', () => this.closeRewardModal());
-        document.getElementById('deleteRewardBtn')!.addEventListener('click', () => this.deleteReward());
 
         // Wish List section
         document.getElementById('addWishItemBtn')!.addEventListener('click', () => this.openWishItemModal());
@@ -262,8 +255,6 @@ class TaskManager {
             this.renderHabits();
         } else if (tabName === 'finances') {
             this.renderFinances();
-        } else if (tabName === 'shop') {
-            this.renderShop();
         } else if (tabName === 'wishlist') {
             this.renderWishList();
         } else if (tabName === 'notes') {
@@ -296,7 +287,6 @@ class TaskManager {
         const userStats = storage.getUserStats();
 
         // Update header stats
-        document.getElementById('totalPoints')!.textContent = String(userStats.totalPoints);
         document.getElementById('userLevel')!.textContent = String(userStats.level);
         document.getElementById('dailyStreak')!.textContent = String(userStats.dailyStreak);
 
@@ -671,7 +661,6 @@ class TaskManager {
                         ${task.dueDate ? `<span class="task-meta-item">📅 ${task.dueDate}</span>` : ''}
                         <span class="task-meta-item"><span class="task-priority ${task.priority}"></span>${task.priority}</span>
                         ${task.repeatType !== 'none' ? `<span class="task-meta-item">🔁 ${task.repeatType}</span>` : ''}
-                        ${task.points ? `<span class="task-meta-item">⭐ ${task.points} pts</span>` : ''}
                     </div>
                 </div>
                 <div class="task-status ${status}">${status}</div>
@@ -715,7 +704,6 @@ class TaskManager {
                 (document.getElementById('taskDueDate') as HTMLInputElement).value = task.dueDate || '';
                 (document.getElementById('taskCategory') as HTMLSelectElement).value = task.category || '';
                 (document.getElementById('taskPriority') as HTMLSelectElement).value = task.priority || 'medium';
-                (document.getElementById('taskPoints') as HTMLInputElement).value = String(task.points || 10);
                 (document.getElementById('taskRepeatType') as HTMLSelectElement).value = task.repeatType || 'none';
                 (document.getElementById('taskProject') as HTMLSelectElement).value = task.projectId || '';
                 (document.getElementById('taskRepeatUnit') as HTMLInputElement).value = String(task.repeatUnit || 1);
@@ -809,7 +797,6 @@ class TaskManager {
             dueDate: (document.getElementById('taskDueDate') as HTMLInputElement).value,
             category: (document.getElementById('taskCategory') as HTMLSelectElement).value,
             priority: (document.getElementById('taskPriority') as HTMLSelectElement).value as Task['priority'],
-            points: parseInt((document.getElementById('taskPoints') as HTMLInputElement).value),
             repeatType: (document.getElementById('taskRepeatType') as HTMLSelectElement).value as Task['repeatType'],
             projectId: (document.getElementById('taskProject') as HTMLSelectElement).value || null
         };
@@ -857,7 +844,6 @@ class TaskManager {
             task.completed = !task.completed;
             if (task.completed) {
                 task.completedDate = this.getSelectedDateStr();
-                storage.addPoints(task.points, 'tasks');
                 storage.updateDailyStreak(true);
                 // If repeatable, immediately create next task with recalculated due date
                 if (task.repeatType !== 'none') {
@@ -931,7 +917,6 @@ class TaskManager {
             description: completedTask.description,
             category: completedTask.category,
             priority: completedTask.priority,
-            points: completedTask.points,
             projectId: completedTask.projectId,
             repeatType: completedTask.repeatType,
             repeatUnit: completedTask.repeatUnit,
@@ -1201,10 +1186,6 @@ class TaskManager {
                         <span class="habit-stat-value">${habit.streak || 0}</span>
                     </div>
                     <div class="habit-stat">
-                        <span class="habit-stat-label">Points</span>
-                        <span class="habit-stat-value">${habit.points}</span>
-                    </div>
-                    <div class="habit-stat">
                         <span class="habit-stat-label">Progress</span>
                         <span class="habit-stat-value">${todaysCompletions}/${targetGoal}</span>
                     </div>
@@ -1247,7 +1228,6 @@ class TaskManager {
                 (document.getElementById('habitIcon') as HTMLInputElement).value = habit.icon || '⭐';
                 document.getElementById('habitIconDisplay')!.textContent = habit.icon || '⭐';
                 (document.getElementById('habitCategory') as HTMLSelectElement).value = habit.category || '';
-                (document.getElementById('habitPoints') as HTMLInputElement).value = String(habit.points || 5);
                 (document.getElementById('habitTargetGoal') as HTMLInputElement).value = String(habit.targetGoal || 1);
                 deleteBtn.style.display = 'block';
 
@@ -1290,7 +1270,6 @@ class TaskManager {
             description: (document.getElementById('habitDescription') as HTMLTextAreaElement).value,
             icon: (document.getElementById('habitIcon') as HTMLInputElement).value,
             category: (document.getElementById('habitCategory') as HTMLSelectElement).value || null,
-            points: parseInt((document.getElementById('habitPoints') as HTMLInputElement).value),
             targetGoal: parseInt((document.getElementById('habitTargetGoal') as HTMLInputElement).value) || 1,
             daysOfWeek: selectedDays.length > 0 ? selectedDays : [0, 1, 2, 3, 4, 5, 6]
         };
@@ -1323,7 +1302,6 @@ class TaskManager {
 
             if (isValidDay) {
                 storage.logHabitCompletion(habitId, this.selectedDate);
-                storage.addPoints(habit.points, 'habits');
                 storage.updateDailyStreak(true);
                 this.renderHabits();
                 this.renderDashboard();
@@ -1742,149 +1720,6 @@ class TaskManager {
                 }
                 this.closeFinanceModal();
                 this.renderFinances();
-            }
-        }
-    }
-
-    // ========================
-    // Shop/Rewards Management
-    // ========================
-    renderShop(): void {
-        const rewards = storage.getRewards();
-        const userStats = storage.getUserStats();
-        const container = document.getElementById('rewardsList')!;
-
-        document.getElementById('shopPointsDisplay')!.textContent = String(userStats.totalPoints);
-
-        if (rewards.length === 0) {
-            container.innerHTML = '<p class="empty-state">No rewards yet. Add rewards to spend your points on!</p>';
-            return;
-        }
-
-        container.innerHTML = rewards.map(reward => {
-            let alreadyPurchased = false;
-            if (reward.repeatable === false) {
-                const purchaseHistory = storage.getData().purchaseHistory || [];
-                alreadyPurchased = purchaseHistory.some(ph => ph.rewardId === reward.id);
-            }
-            const disabled = userStats.totalPoints < reward.cost || alreadyPurchased;
-            let purchaseLabel = 'Purchase';
-            if (userStats.totalPoints < reward.cost) purchaseLabel = 'Not Enough Points';
-            if (alreadyPurchased) purchaseLabel = 'Purchased';
-
-            return `
-                <div class="project-card blue" style="cursor: pointer;" data-reward-id="${reward.id}">
-                    <div class="project-title">${reward.name}</div>
-                    ${reward.description ? `<div class="project-description">${reward.description}</div>` : ''}
-                    <div class="project-stats">
-                        <div class="project-stat">
-                            <span class="project-stat-label">Cost</span>
-                            <span class="project-stat-value">${reward.cost} pts</span>
-                        </div>
-                        <div class="project-stat">
-                            <span class="project-stat-label">${reward.repeatable === false ? 'One-time' : 'Repeatable'}</span>
-                        </div>
-                    </div>
-                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                        <button class="btn btn-primary purchase-btn" style="flex: 1;" ${disabled ? 'disabled' : ''}>
-                            ${purchaseLabel}
-                        </button>
-                        <button class="btn btn-secondary edit-reward-btn">Edit</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        document.querySelectorAll('.purchase-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const card = (e.target as HTMLElement).closest('[data-reward-id]') as HTMLElement;
-                this.purchaseReward(card.dataset.rewardId!);
-            });
-        });
-
-        document.querySelectorAll('.edit-reward-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const card = (e.target as HTMLElement).closest('[data-reward-id]') as HTMLElement;
-                this.openRewardModal(card.dataset.rewardId!);
-            });
-        });
-    }
-
-    openRewardModal(rewardId: string | null = null): void {
-        this.currentEditingRewardId = rewardId;
-        const modal = document.getElementById('rewardModal')!;
-        const form = document.getElementById('rewardForm') as HTMLFormElement;
-        const deleteBtn = document.getElementById('deleteRewardBtn') as HTMLElement;
-
-        form.reset();
-        deleteBtn.style.display = 'none';
-
-        document.getElementById('rewardModalTitle')!.textContent = rewardId ? 'Edit Reward' : 'Add Reward';
-
-        if (rewardId) {
-            const reward = storage.getRewards().find(r => r.id === rewardId);
-            if (reward) {
-                (document.getElementById('rewardName') as HTMLInputElement).value = reward.name;
-                (document.getElementById('rewardDescription') as HTMLTextAreaElement).value = reward.description || '';
-                (document.getElementById('rewardCost') as HTMLInputElement).value = String(reward.cost);
-                (document.getElementById('rewardRepeatable') as HTMLSelectElement).value = String(reward.repeatable === undefined ? true : reward.repeatable);
-                deleteBtn.style.display = 'block';
-            }
-        }
-
-        modal.classList.add('active');
-    }
-
-    closeRewardModal(): void {
-        document.getElementById('rewardModal')!.classList.remove('active');
-        this.currentEditingRewardId = null;
-    }
-
-    saveReward(e: Event): void {
-        e.preventDefault();
-
-        const reward = {
-            name: (document.getElementById('rewardName') as HTMLInputElement).value,
-            description: (document.getElementById('rewardDescription') as HTMLTextAreaElement).value,
-            cost: parseInt((document.getElementById('rewardCost') as HTMLInputElement).value),
-            repeatable: (document.getElementById('rewardRepeatable') as HTMLSelectElement).value === 'true'
-        };
-
-        if (this.currentEditingRewardId) {
-            storage.updateReward(this.currentEditingRewardId, reward);
-        } else {
-            storage.addReward(reward);
-        }
-
-        this.closeRewardModal();
-        this.renderShop();
-    }
-
-    deleteReward(): void {
-        if (this.currentEditingRewardId) {
-            if (confirm('Are you sure you want to delete this reward?')) {
-                storage.deleteReward(this.currentEditingRewardId);
-                this.closeRewardModal();
-                this.renderShop();
-            }
-        }
-    }
-
-    purchaseReward(rewardId: string): void {
-        const reward = storage.getRewards().find(r => r.id === rewardId);
-        if (!reward) return;
-
-        if (confirm(`Purchase "${reward.name}" for ${reward.cost} points?`)) {
-            const result = storage.purchaseReward(rewardId);
-
-            if (result.success) {
-                alert(`Congratulations! You've purchased: ${reward.name}!\n\nEnjoy your reward! 🎉`);
-                this.renderShop();
-                this.renderDashboard();
-            } else {
-                alert(result.message);
             }
         }
     }

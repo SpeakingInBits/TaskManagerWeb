@@ -22,7 +22,6 @@ test.describe('Task Manager App', () => {
         });
 
         test('should display header stats', async ({ page }) => {
-            await expect(page.locator('#totalPoints')).toHaveText('0');
             await expect(page.locator('#userLevel')).toHaveText('1');
             await expect(page.locator('#dailyStreak')).toHaveText('0');
         });
@@ -237,31 +236,6 @@ test.describe('Task Manager App', () => {
     });
 
     // ========================
-    // Rewards Shop
-    // ========================
-    test.describe('rewards shop', () => {
-        test.beforeEach(async ({ page }) => {
-            await page.click('[data-tab="shop"]');
-        });
-
-        test('should show points display', async ({ page }) => {
-            await expect(page.locator('#shopPointsDisplay')).toHaveText('0');
-        });
-
-        test('should create a reward', async ({ page }) => {
-            await page.click('#addRewardBtn');
-            await page.fill('#rewardName', 'Movie Night');
-            await page.fill('#rewardDescription', 'Watch a movie');
-            await page.fill('#rewardCost', '100');
-            await page.click('#rewardForm button[type="submit"]');
-
-            await expect(page.locator('#rewardModal')).not.toHaveClass(/active/);
-            await expect(page.locator('.project-card')).toBeVisible();
-            await expect(page.locator('.project-title')).toContainText('Movie Night');
-        });
-    });
-
-    // ========================
     // Date Navigation
     // ========================
     test.describe('date navigation', () => {
@@ -319,7 +293,6 @@ test.describe('Task Manager App', () => {
                     title: 'Overdue Task',
                     dueDate: dueDate,
                     priority: 'medium',
-                    points: 10,
                     repeatType: 'none',
                     completed: false,
                     createdDate: new Date().toISOString()
@@ -346,7 +319,6 @@ test.describe('Task Manager App', () => {
                     title: 'Completed Old Task',
                     dueDate: dueDate,
                     priority: 'medium',
-                    points: 10,
                     repeatType: 'none',
                     completed: true,
                     completedDate: dueDate,
@@ -383,9 +355,9 @@ test.describe('Task Manager App', () => {
             await page.evaluate(() => {
                 const data = JSON.parse(localStorage.getItem('taskManagerData') || '{}');
                 data.tasks = [
-                    { id: 'task-high', title: 'High Task', priority: 'high', points: 10, repeatType: 'none', completed: false, createdDate: new Date().toISOString(), category: 'Work' },
-                    { id: 'task-medium', title: 'Medium Task', priority: 'medium', points: 10, repeatType: 'none', completed: false, createdDate: new Date().toISOString(), category: 'Personal' },
-                    { id: 'task-low', title: 'Low Task', priority: 'low', points: 10, repeatType: 'none', completed: false, createdDate: new Date().toISOString() },
+                    { id: 'task-high', title: 'High Task', priority: 'high', repeatType: 'none', completed: false, createdDate: new Date().toISOString(), category: 'Work' },
+                    { id: 'task-medium', title: 'Medium Task', priority: 'medium', repeatType: 'none', completed: false, createdDate: new Date().toISOString(), category: 'Personal' },
+                    { id: 'task-low', title: 'Low Task', priority: 'low', repeatType: 'none', completed: false, createdDate: new Date().toISOString() },
                 ];
                 localStorage.setItem('taskManagerData', JSON.stringify(data));
             });
