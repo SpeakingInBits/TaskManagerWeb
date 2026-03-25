@@ -4,7 +4,7 @@
 
 const STORAGE_VERSION = '1.0.0';
 const STORAGE_KEY = 'taskManagerData';
-const DATA_SCHEMA_VERSION = 1;
+const DATA_SCHEMA_VERSION = 2;
 
 // ========================
 // Type Definitions
@@ -17,7 +17,6 @@ export interface Task {
     dueDate?: string;
     category?: string | null;
     priority: 'low' | 'medium' | 'high';
-    points: number;
     repeatType: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom' | 'movable';
     repeatUnit?: number;
     customRepeatDays?: number;
@@ -43,7 +42,6 @@ export interface Habit {
     description?: string;
     icon: string;
     category?: string | null;
-    points: number;
     targetGoal: number;
     daysOfWeek?: number[];
     streak: number;
@@ -68,25 +66,6 @@ export interface FinanceItem {
     createdDate: string;
 }
 
-export interface Reward {
-    id: string;
-    name: string;
-    description?: string;
-    cost: number;
-    repeatable: boolean;
-    purchased: boolean;
-    createdDate: string;
-}
-
-export interface Purchase {
-    id: string;
-    rewardId: string;
-    rewardName: string;
-    rewardDescription?: string;
-    cost: number;
-    purchaseDate: string;
-}
-
 export interface WishItem {
     id: string;
     title: string;
@@ -105,20 +84,15 @@ export interface Note {
     updatedDate?: string;
 }
 
-export interface PointsBreakdown {
-    tasks: number;
-    projects: number;
-    habits: number;
-    streakBonus: number;
-    [key: string]: number;
-}
-
 export interface UserStats {
-    totalPoints: number;
     level: number;
     dailyStreak: number;
     lastActivityDate: string | null;
-    pointsBreakdown: PointsBreakdown;
+}
+
+interface LegacyUserStats extends UserStats {
+    totalPoints?: number;
+    pointsBreakdown?: Record<string, number>;
 }
 
 export interface Settings {
@@ -136,19 +110,11 @@ export interface AppData {
     expenses: FinanceItem[];
     revenue: FinanceItem[];
     charges: FinanceItem[];
-    rewards: Reward[];
-    purchaseHistory: Purchase[];
     categories: string[];
     userStats: UserStats;
     settings: Settings;
     wishList: WishItem[];
     notes: Note[];
-}
-
-export interface PurchaseResult {
-    success: boolean;
-    message?: string;
-    purchase?: Purchase;
 }
 
 export interface ValidationResult {
@@ -167,6 +133,16 @@ export class StorageManager {
         const existingData = localStorage.getItem(STORAGE_KEY);
         if (!existingData) {
             this.createInitialData();
+        } else {
+            try {
+                const data = JSON.parse(existingData) as Partial<AppData>;
+                if (!data.schemaVersion || data.schemaVersion < DATA_SCHEMA_VERSION) {
+                    this.migrateToLatest();
+                }
+            } catch (e) {
+                console.error('Failed to read or migrate existing data:', e);
+                this.createInitialData();
+            }
         }
     }
 
@@ -182,20 +158,11 @@ export class StorageManager {
             expenses: [],
             revenue: [],
             charges: [],
-            rewards: [],
-            purchaseHistory: [],
             categories: ['Work', 'Personal', 'Home', 'Shopping', 'Health', 'Fitness', 'Learning', 'Productivity', 'Food', 'Transportation', 'Entertainment', 'Utilities', 'Income'],
             userStats: {
-                totalPoints: 0,
                 level: 1,
                 dailyStreak: 0,
-                lastActivityDate: null,
-                pointsBreakdown: {
-                    tasks: 0,
-                    projects: 0,
-                    habits: 0,
-                    streakBonus: 0
-                }
+                lastActivityDate: null
             },
             settings: {
                 tasksPerLevel: 30
@@ -232,7 +199,6 @@ export class StorageManager {
             completed: false,
             title: task.title || '',
             priority: task.priority || 'medium',
-            points: task.points || 10,
             repeatType: task.repeatType || 'none',
         } as Task;
         data.tasks.push(newTask);
@@ -315,7 +281,6 @@ export class StorageManager {
             targetGoal: habit.targetGoal || 1,
             name: habit.name || '',
             icon: habit.icon || '⭐',
-            points: habit.points || 10,
         } as Habit;
         data.habits.push(newHabit);
         this.saveData(data);
@@ -535,103 +500,6 @@ export class StorageManager {
         return data.charges || [];
     }
 
-    // Rewards Shop Management
-    addReward(reward: Partial<Reward>): Reward {
-        const data = this.getData();
-        if (!data.rewards) {
-            data.rewards = [];
-        }
-        const newReward: Reward = {
-            ...reward,
-            id: this.generateId(),
-            createdDate: new Date().toISOString(),
-            purchased: false,
-            repeatable: typeof reward.repeatable === 'undefined' ? true : reward.repeatable,
-            name: reward.name || '',
-            cost: reward.cost || 0,
-        } as Reward;
-        data.rewards.push(newReward);
-        this.saveData(data);
-        return newReward;
-    }
-
-    updateReward(rewardId: string, updates: Partial<Reward>): Reward | undefined {
-        const data = this.getData();
-        if (!data.rewards) {
-            data.rewards = [];
-        }
-        const reward = data.rewards.find(r => r.id === rewardId);
-        if (reward) {
-            Object.assign(reward, updates);
-            if (typeof reward.repeatable === 'undefined') reward.repeatable = true;
-            this.saveData(data);
-        }
-        return reward;
-    }
-
-    deleteReward(rewardId: string): void {
-        const data = this.getData();
-        if (!data.rewards) {
-            data.rewards = [];
-        }
-        data.rewards = data.rewards.filter(r => r.id !== rewardId);
-        this.saveData(data);
-    }
-
-    getRewards(): Reward[] {
-        const data = this.getData();
-        return data.rewards || [];
-    }
-
-    purchaseReward(rewardId: string): PurchaseResult {
-        const data = this.getData();
-        if (!data.rewards) {
-            data.rewards = [];
-        }
-        if (!data.purchaseHistory) {
-            data.purchaseHistory = [];
-        }
-
-        const reward = data.rewards.find(r => r.id === rewardId);
-        if (!reward) {
-            return { success: false, message: 'Reward not found' };
-        }
-
-        if (data.userStats.totalPoints < reward.cost) {
-            return { success: false, message: 'Not enough points' };
-        }
-
-        // If one-time and already purchased, block
-        if (reward.repeatable === false) {
-            const alreadyPurchased = data.purchaseHistory.some(ph => ph.rewardId === reward.id);
-            if (alreadyPurchased) {
-                return { success: false, message: 'This reward can only be purchased once.' };
-            }
-        }
-
-        // Deduct points
-        data.userStats.totalPoints -= reward.cost;
-
-        // Add to purchase history
-        const purchase: Purchase = {
-            id: this.generateId(),
-            rewardId: reward.id,
-            rewardName: reward.name,
-            rewardDescription: reward.description,
-            cost: reward.cost,
-            purchaseDate: new Date().toISOString()
-        };
-        data.purchaseHistory.push(purchase);
-
-        this.saveData(data);
-        return { success: true, purchase };
-    }
-
-    getPurchaseHistory(): Purchase[] {
-        const data = this.getData();
-        return data.purchaseHistory || [];
-    }
-
     // Wish List Management
     addWishItem(item: Partial<WishItem>): WishItem {
         const data = this.getData();
@@ -724,18 +592,6 @@ export class StorageManager {
         return data.notes.slice().sort((a, b) =>
             new Date(b.updatedDate ?? b.createdDate).getTime() - new Date(a.updatedDate ?? a.createdDate).getTime()
         );
-    }
-
-    // Points Management
-    addPoints(amount: number, source: string): void {
-        const data = this.getData();
-        data.userStats.totalPoints += amount;
-        if (data.userStats.pointsBreakdown[source] !== undefined) {
-            data.userStats.pointsBreakdown[source] += amount;
-        }
-        // Level is now calculated based on completed tasks, not points
-        this.updateLevel();
-        this.saveData(data);
     }
 
     updateLevel(): void {
@@ -855,15 +711,11 @@ export class StorageManager {
             expenses: Array.isArray(data.expenses) ? data.expenses : [],
             revenue: Array.isArray(data.revenue) ? data.revenue : [],
             charges: Array.isArray(data.charges) ? data.charges : [],
-            rewards: Array.isArray(data.rewards) ? data.rewards : [],
-            purchaseHistory: Array.isArray(data.purchaseHistory) ? data.purchaseHistory : [],
             categories,
-            userStats: data.userStats || {
-                totalPoints: 0,
-                level: 1,
-                dailyStreak: 0,
-                lastActivityDate: null,
-                pointsBreakdown: { tasks: 0, projects: 0, habits: 0, streakBonus: 0 }
+            userStats: {
+                level: (data.userStats as LegacyUserStats)?.level ?? 1,
+                dailyStreak: (data.userStats as LegacyUserStats)?.dailyStreak ?? 0,
+                lastActivityDate: (data.userStats as LegacyUserStats)?.lastActivityDate ?? null,
             },
             settings: data.settings || { tasksPerLevel: 30 },
             wishList: Array.isArray(data.wishList) ? data.wishList : [],

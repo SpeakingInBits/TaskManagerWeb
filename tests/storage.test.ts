@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StorageManager, getDaysUntilDueText } from '../src/storage';
-import type { Task, Habit, FinanceItem, Reward } from '../src/storage';
+import type { Task, Habit, FinanceItem } from '../src/storage';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -42,7 +42,6 @@ describe('StorageManager', () => {
             expect(data.projects).toEqual([]);
             expect(data.habits).toEqual([]);
             expect(data.categories).toContain('Work');
-            expect(data.userStats.totalPoints).toBe(0);
             expect(data.userStats.level).toBe(1);
         });
 
@@ -58,11 +57,10 @@ describe('StorageManager', () => {
     // ========================
     describe('task management', () => {
         it('should add a task', () => {
-            const task = storage.addTask({ title: 'Buy groceries', priority: 'high', points: 15 });
+            const task = storage.addTask({ title: 'Buy groceries', priority: 'high' });
             expect(task.id).toBeDefined();
             expect(task.title).toBe('Buy groceries');
             expect(task.priority).toBe('high');
-            expect(task.points).toBe(15);
             expect(task.completed).toBe(false);
             expect(task.createdDate).toBeDefined();
         });
@@ -94,7 +92,6 @@ describe('StorageManager', () => {
         it('should set default values for task fields', () => {
             const task = storage.addTask({ title: 'Minimal' });
             expect(task.priority).toBe('medium');
-            expect(task.points).toBe(10);
             expect(task.repeatType).toBe('none');
         });
     });
@@ -137,7 +134,7 @@ describe('StorageManager', () => {
     // ========================
     describe('habit management', () => {
         it('should add a habit', () => {
-            const habit = storage.addHabit({ name: 'Exercise', icon: '💪', points: 20 });
+            const habit = storage.addHabit({ name: 'Exercise', icon: '💪' });
             expect(habit.id).toBeDefined();
             expect(habit.name).toBe('Exercise');
             expect(habit.streak).toBe(0);
@@ -335,81 +332,9 @@ describe('StorageManager', () => {
     });
 
     // ========================
-    // Rewards Shop
+    // Leveling & Streak
     // ========================
-    describe('rewards shop', () => {
-        it('should add a reward', () => {
-            const reward = storage.addReward({ name: 'Movie Night', cost: 100 });
-            expect(reward.id).toBeDefined();
-            expect(reward.name).toBe('Movie Night');
-            expect(reward.repeatable).toBe(true);
-            expect(reward.purchased).toBe(false);
-        });
-
-        it('should update a reward', () => {
-            const reward = storage.addReward({ name: 'Movie', cost: 100 });
-            storage.updateReward(reward.id, { name: 'Movie Night', cost: 150 });
-            const updated = storage.getRewards().find(r => r.id === reward.id);
-            expect(updated?.name).toBe('Movie Night');
-            expect(updated?.cost).toBe(150);
-        });
-
-        it('should delete a reward', () => {
-            const reward = storage.addReward({ name: 'Movie Night', cost: 100 });
-            storage.deleteReward(reward.id);
-            expect(storage.getRewards().length).toBe(0);
-        });
-
-        it('should purchase a reward and deduct points', () => {
-            storage.addPoints(200, 'tasks');
-            const reward = storage.addReward({ name: 'Movie Night', cost: 100 });
-            const result = storage.purchaseReward(reward.id);
-            expect(result.success).toBe(true);
-            expect(storage.getUserStats().totalPoints).toBe(100);
-            expect(storage.getPurchaseHistory().length).toBe(1);
-        });
-
-        it('should fail to purchase with insufficient points', () => {
-            const reward = storage.addReward({ name: 'Expensive', cost: 9999 });
-            const result = storage.purchaseReward(reward.id);
-            expect(result.success).toBe(false);
-            expect(result.message).toBe('Not enough points');
-        });
-
-        it('should prevent re-purchasing one-time rewards', () => {
-            storage.addPoints(500, 'tasks');
-            const reward = storage.addReward({ name: 'One-time', cost: 100, repeatable: false });
-            storage.purchaseReward(reward.id);
-            const result = storage.purchaseReward(reward.id);
-            expect(result.success).toBe(false);
-            expect(result.message).toBe('This reward can only be purchased once.');
-        });
-
-        it('should allow re-purchasing repeatable rewards', () => {
-            storage.addPoints(500, 'tasks');
-            const reward = storage.addReward({ name: 'Repeatable', cost: 100, repeatable: true });
-            storage.purchaseReward(reward.id);
-            const result = storage.purchaseReward(reward.id);
-            expect(result.success).toBe(true);
-        });
-
-        it('should fail for non-existent reward', () => {
-            const result = storage.purchaseReward('nonexistent');
-            expect(result.success).toBe(false);
-            expect(result.message).toBe('Reward not found');
-        });
-    });
-
-    // ========================
-    // Points & Leveling
-    // ========================
-    describe('points and leveling', () => {
-        it('should add points', () => {
-            storage.addPoints(50, 'tasks');
-            expect(storage.getUserStats().totalPoints).toBe(50);
-            expect(storage.getUserStats().pointsBreakdown.tasks).toBe(50);
-        });
-
+    describe('leveling and streak', () => {
         it('should calculate level based on completed tasks', () => {
             // Default: 30 tasks per level
             for (let i = 0; i < 31; i++) {
