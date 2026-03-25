@@ -4,7 +4,7 @@
 
 const STORAGE_VERSION = '1.0.0';
 const STORAGE_KEY = 'taskManagerData';
-const DATA_SCHEMA_VERSION = 2;
+const DATA_SCHEMA_VERSION = 3;
 
 // ========================
 // Type Definitions
@@ -74,6 +74,14 @@ export interface WishItem {
     order: number;
     createdDate: string;
     completed?: boolean;
+    listId?: string | null;
+}
+
+export interface WishList {
+    id: string;
+    name: string;
+    order: number;
+    createdDate: string;
 }
 
 export interface Note {
@@ -114,6 +122,7 @@ export interface AppData {
     userStats: UserStats;
     settings: Settings;
     wishList: WishItem[];
+    wishLists: WishList[];
     notes: Note[];
 }
 
@@ -168,6 +177,7 @@ export class StorageManager {
                 tasksPerLevel: 30
             },
             wishList: [],
+            wishLists: [],
             notes: []
         };
 
@@ -552,6 +562,63 @@ export class StorageManager {
         this.saveData(data);
     }
 
+    // Named Wish Lists Management
+    getWishLists(): WishList[] {
+        const data = this.getData();
+        if (!data.wishLists) return [];
+        return data.wishLists.slice().sort((a, b) => a.order - b.order);
+    }
+
+    addWishList(list: Partial<WishList>): WishList {
+        const data = this.getData();
+        if (!data.wishLists) data.wishLists = [];
+        const newList: WishList = {
+            id: this.generateId(),
+            name: list.name || '',
+            order: data.wishLists.length,
+            createdDate: new Date().toISOString(),
+        };
+        data.wishLists.push(newList);
+        this.saveData(data);
+        return newList;
+    }
+
+    updateWishList(listId: string, updates: Partial<WishList>): WishList | undefined {
+        const data = this.getData();
+        if (!data.wishLists) data.wishLists = [];
+        const list = data.wishLists.find(l => l.id === listId);
+        if (list) {
+            Object.assign(list, updates);
+            this.saveData(data);
+        }
+        return list;
+    }
+
+    deleteWishList(listId: string): void {
+        const data = this.getData();
+        if (!data.wishLists) data.wishLists = [];
+        data.wishLists = data.wishLists.filter(l => l.id !== listId);
+        // Re-index order values
+        data.wishLists.forEach((l, idx) => { l.order = idx; });
+        // Move items in the deleted list to uncategorized
+        if (data.wishList) {
+            data.wishList = data.wishList.map(item =>
+                item.listId === listId ? { ...item, listId: null } : item
+            );
+        }
+        this.saveData(data);
+    }
+
+    reorderWishLists(orderedIds: string[]): void {
+        const data = this.getData();
+        if (!data.wishLists) return;
+        orderedIds.forEach((id, idx) => {
+            const list = data.wishLists.find(l => l.id === id);
+            if (list) list.order = idx;
+        });
+        this.saveData(data);
+    }
+
     // Note Management
     addNote(note: Partial<Note>): Note {
         const data = this.getData();
@@ -719,6 +786,7 @@ export class StorageManager {
             },
             settings: data.settings || { tasksPerLevel: 30 },
             wishList: Array.isArray(data.wishList) ? data.wishList : [],
+            wishLists: Array.isArray(data.wishLists) ? data.wishLists : [],
             notes: Array.isArray(data.notes) ? data.notes : [],
         };
     }

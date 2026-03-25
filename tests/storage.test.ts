@@ -687,6 +687,89 @@ describe('StorageManager', () => {
     });
 
     // ========================
+    // Named Wish Lists Management
+    // ========================
+    describe('named wish lists management', () => {
+        it('should add a wish list', () => {
+            const list = storage.addWishList({ name: 'Electronics' });
+            expect(list.id).toBeDefined();
+            expect(list.name).toBe('Electronics');
+            expect(list.order).toBe(0);
+            expect(list.createdDate).toBeDefined();
+        });
+
+        it('should get all wish lists sorted by order', () => {
+            storage.addWishList({ name: 'List A' });
+            storage.addWishList({ name: 'List B' });
+            storage.addWishList({ name: 'List C' });
+            const lists = storage.getWishLists();
+            expect(lists.length).toBe(3);
+            expect(lists[0].order).toBeLessThanOrEqual(lists[1].order);
+            expect(lists[1].order).toBeLessThanOrEqual(lists[2].order);
+        });
+
+        it('should update a wish list', () => {
+            const list = storage.addWishList({ name: 'Old Name' });
+            const updated = storage.updateWishList(list.id, { name: 'New Name' });
+            expect(updated?.name).toBe('New Name');
+        });
+
+        it('should return undefined when updating non-existent wish list', () => {
+            const result = storage.updateWishList('nonexistent', { name: 'Test' });
+            expect(result).toBeUndefined();
+        });
+
+        it('should delete a wish list and re-index order', () => {
+            storage.addWishList({ name: 'List A' });
+            const listB = storage.addWishList({ name: 'List B' });
+            storage.addWishList({ name: 'List C' });
+            storage.deleteWishList(listB.id);
+            const lists = storage.getWishLists();
+            expect(lists.length).toBe(2);
+            expect(lists[0].order).toBe(0);
+            expect(lists[1].order).toBe(1);
+        });
+
+        it('should move items to uncategorized when their list is deleted', () => {
+            const list = storage.addWishList({ name: 'To Delete' });
+            const item = storage.addWishItem({ title: 'Item in list', listId: list.id });
+            storage.deleteWishList(list.id);
+            const items = storage.getWishItems();
+            const found = items.find(i => i.id === item.id);
+            expect(found).toBeDefined();
+            expect(found?.listId).toBeNull();
+        });
+
+        it('should reorder wish lists', () => {
+            const a = storage.addWishList({ name: 'List A' });
+            const b = storage.addWishList({ name: 'List B' });
+            const c = storage.addWishList({ name: 'List C' });
+            storage.reorderWishLists([c.id, a.id, b.id]);
+            const lists = storage.getWishLists();
+            expect(lists[0].name).toBe('List C');
+            expect(lists[1].name).toBe('List A');
+            expect(lists[2].name).toBe('List B');
+        });
+
+        it('should associate a wish item with a list', () => {
+            const list = storage.addWishList({ name: 'Tech' });
+            const item = storage.addWishItem({ title: 'Laptop', listId: list.id });
+            expect(item.listId).toBe(list.id);
+            const items = storage.getWishItems();
+            const found = items.find(i => i.id === item.id);
+            expect(found?.listId).toBe(list.id);
+        });
+
+        it('should update listId on a wish item', () => {
+            const list = storage.addWishList({ name: 'Tech' });
+            const item = storage.addWishItem({ title: 'Laptop' });
+            expect(item.listId).toBeUndefined();
+            const updated = storage.updateWishItem(item.id, { listId: list.id });
+            expect(updated?.listId).toBe(list.id);
+        });
+    });
+
+    // ========================
     // Clear All Data
     // ========================
     describe('clearAllData', () => {

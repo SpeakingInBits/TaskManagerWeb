@@ -2,7 +2,7 @@
 // Main Application Logic
 // ========================
 
-import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem, WishItem, Note, getDaysUntilDueText } from './storage.js';
+import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem, WishItem, WishList, Note, getDaysUntilDueText } from './storage.js';
 
 const FILTER_SETTINGS_KEY = 'taskManagerFilterSettings';
 
@@ -24,6 +24,7 @@ class TaskManager {
     currentEditingFinanceId: string | null = null;
     currentEditingFinanceType: string | null = null;
     currentEditingWishItemId: string | null = null;
+    currentEditingWishListId: string | null = null;
     currentEditingNoteId: string | null = null;
     dragSrcWishId: string | null = null;
     selectedDate: Date = new Date();
@@ -133,9 +134,13 @@ class TaskManager {
 
         // Wish List section
         document.getElementById('addWishItemBtn')!.addEventListener('click', () => this.openWishItemModal());
+        document.getElementById('addWishListBtn')!.addEventListener('click', () => this.openWishListModal());
         document.getElementById('wishItemForm')!.addEventListener('submit', (e) => this.saveWishItem(e));
         document.getElementById('cancelWishItemBtn')!.addEventListener('click', () => this.closeWishItemModal());
         document.getElementById('deleteWishItemBtn')!.addEventListener('click', () => this.deleteWishItem());
+        document.getElementById('wishListForm')!.addEventListener('submit', (e) => this.saveWishList(e));
+        document.getElementById('cancelWishListBtn')!.addEventListener('click', () => this.closeWishListModal());
+        document.getElementById('deleteWishListBtn')!.addEventListener('click', () => this.deleteWishListFromModal());
 
         // Notes section
         document.getElementById('addNoteBtn')!.addEventListener('click', () => this.openNoteModal());
@@ -1728,16 +1733,85 @@ class TaskManager {
     // Wish List
     // ========================
     renderWishList(): void {
-        const items = storage.getWishItems();
-        const container = document.getElementById('wishList')!;
+        const lists = storage.getWishLists();
+        const allItems = storage.getWishItems();
+        const container = document.getElementById('wishListContent')!;
 
-        if (items.length === 0) {
-            container.innerHTML = '<p class="empty-state">No items in your wish list. Add one to get started!</p>';
+        if (lists.length === 0 && allItems.length === 0) {
+            container.innerHTML = '<p class="empty-state">No items in your wish list. Add a list or item to get started!</p>';
             return;
         }
 
-        container.innerHTML = items.map(item => this.renderWishItem(item)).join('');
+        let html = '';
 
+        // Render each named list group
+        lists.forEach(list => {
+            const listItems = allItems.filter(i => i.listId === list.id);
+            html += this.renderWishListGroup(list.id, list.name, listItems, true);
+        });
+
+        // Render uncategorized items (no listId or listId is null)
+        const uncategorized = allItems.filter(i => !i.listId);
+        if (uncategorized.length > 0 || lists.length === 0) {
+            html += this.renderWishListGroup(null, 'Uncategorized', uncategorized, false);
+        }
+
+        container.innerHTML = html;
+
+        // Set up drag-drop for each named list group
+        lists.forEach(list => {
+            const groupEl = container.querySelector<HTMLElement>(`.wish-list-group[data-list-id="${list.id}"]`);
+            if (groupEl) {
+                const itemsContainer = groupEl.querySelector<HTMLElement>('.wish-list')!;
+                this.setupWishItemDragDrop(itemsContainer, list.id);
+                const addBtn = groupEl.querySelector<HTMLElement>('.wish-list-group-add-btn');
+                if (addBtn) {
+                    addBtn.addEventListener('click', () => this.openWishItemModal(null, list.id));
+                }
+                const editBtn = groupEl.querySelector<HTMLElement>('.wish-list-edit-btn');
+                if (editBtn) {
+                    editBtn.addEventListener('click', () => this.openWishListModal(list.id));
+                }
+            }
+        });
+
+        // Set up drag-drop for uncategorized section
+        const uncategorizedGroup = container.querySelector<HTMLElement>('.wish-list-group[data-list-id="uncategorized"]');
+        if (uncategorizedGroup) {
+            const itemsContainer = uncategorizedGroup.querySelector<HTMLElement>('.wish-list')!;
+            this.setupWishItemDragDrop(itemsContainer, null);
+            const addBtn = uncategorizedGroup.querySelector<HTMLElement>('.wish-list-group-add-btn');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => this.openWishItemModal(null, null));
+            }
+        }
+    }
+
+    renderWishListGroup(listId: string | null, name: string, items: WishItem[], hasEditBtn: boolean): string {
+        const dataAttr = listId ? `data-list-id="${listId}"` : 'data-list-id="uncategorized"';
+        const editBtnHtml = hasEditBtn
+            ? `<button class="btn btn-secondary wish-list-edit-btn" title="Edit list">Edit</button>`
+            : '';
+        const itemsHtml = items.length > 0
+            ? items.map(item => this.renderWishItem(item)).join('')
+            : `<p class="empty-state wish-list-empty">No items yet. Click "+ Add" to add one.</p>`;
+        return `
+            <div class="wish-list-group" ${dataAttr}>
+                <div class="wish-list-group-header">
+                    <span class="wish-list-group-name">${name}</span>
+                    <div class="wish-list-group-actions">
+                        ${editBtnHtml}
+                        <button class="btn btn-primary wish-list-group-add-btn">+ Add</button>
+                    </div>
+                </div>
+                <div class="wish-list">
+                    ${itemsHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    setupWishItemDragDrop(container: HTMLElement, listId: string | null): void {
         container.querySelectorAll<HTMLElement>('.wish-item').forEach(el => {
             const handle = el.querySelector<HTMLElement>('.wish-drag-handle');
             if (!handle) return;
@@ -1774,11 +1848,13 @@ class TaskManager {
                 e.preventDefault();
                 const targetId = el.dataset.wishId!;
                 if (this.dragSrcWishId && this.dragSrcWishId !== targetId) {
-                    const allItems = storage.getWishItems();
-                    const srcIdx = allItems.findIndex(i => i.id === this.dragSrcWishId);
-                    const tgtIdx = allItems.findIndex(i => i.id === targetId);
+                    const groupItems = storage.getWishItems().filter(i =>
+                        listId ? i.listId === listId : !i.listId
+                    );
+                    const srcIdx = groupItems.findIndex(i => i.id === this.dragSrcWishId);
+                    const tgtIdx = groupItems.findIndex(i => i.id === targetId);
                     if (srcIdx !== -1 && tgtIdx !== -1) {
-                        const reordered = [...allItems];
+                        const reordered = [...groupItems];
                         const [moved] = reordered.splice(srcIdx, 1);
                         reordered.splice(tgtIdx, 0, moved);
                         storage.reorderWishItems(reordered.map(i => i.id));
@@ -1839,11 +1915,13 @@ class TaskManager {
                 touchDragOverItem = null;
                 touchDragActive = false;
                 if (this.dragSrcWishId && targetId && this.dragSrcWishId !== targetId) {
-                    const allItems = storage.getWishItems();
-                    const srcIdx = allItems.findIndex(i => i.id === this.dragSrcWishId);
-                    const tgtIdx = allItems.findIndex(i => i.id === targetId);
+                    const groupItems = storage.getWishItems().filter(i =>
+                        listId ? i.listId === listId : !i.listId
+                    );
+                    const srcIdx = groupItems.findIndex(i => i.id === this.dragSrcWishId);
+                    const tgtIdx = groupItems.findIndex(i => i.id === targetId);
                     if (srcIdx !== -1 && tgtIdx !== -1) {
-                        const reordered = [...allItems];
+                        const reordered = [...groupItems];
                         const [moved] = reordered.splice(srcIdx, 1);
                         reordered.splice(tgtIdx, 0, moved);
                         storage.reorderWishItems(reordered.map(i => i.id));
@@ -1892,14 +1970,20 @@ class TaskManager {
         `;
     }
 
-    openWishItemModal(itemId: string | null = null): void {
+    openWishItemModal(itemId: string | null = null, preselectedListId: string | null = null): void {
         this.currentEditingWishItemId = itemId;
         const modal = document.getElementById('wishItemModal')!;
         const form = document.getElementById('wishItemForm') as HTMLFormElement;
         const deleteBtn = document.getElementById('deleteWishItemBtn') as HTMLElement;
+        const listSelect = document.getElementById('wishItemList') as HTMLSelectElement;
 
         form.reset();
         deleteBtn.style.display = 'none';
+
+        // Populate list selector
+        const lists = storage.getWishLists();
+        listSelect.innerHTML = '<option value="">Uncategorized</option>' +
+            lists.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
 
         document.getElementById('wishItemModalTitle')!.textContent = itemId ? 'Edit Wish List Item' : 'Add Wish List Item';
 
@@ -1910,8 +1994,11 @@ class TaskManager {
                 (document.getElementById('wishItemUrl') as HTMLInputElement).value = item.url || '';
                 (document.getElementById('wishItemPrice') as HTMLInputElement).value =
                     item.price !== undefined && item.price !== null ? String(item.price) : '';
+                listSelect.value = item.listId || '';
                 deleteBtn.style.display = 'block';
             }
+        } else if (preselectedListId) {
+            listSelect.value = preselectedListId;
         }
 
         modal.classList.add('active');
@@ -1929,8 +2016,10 @@ class TaskManager {
         const url = (document.getElementById('wishItemUrl') as HTMLInputElement).value.trim() || undefined;
         const priceVal = (document.getElementById('wishItemPrice') as HTMLInputElement).value;
         const price = priceVal !== '' ? parseFloat(priceVal) : undefined;
+        const listIdVal = (document.getElementById('wishItemList') as HTMLSelectElement).value;
+        const listId = listIdVal || null;
 
-        const item = { title, url, price };
+        const item = { title, url, price, listId };
 
         if (this.currentEditingWishItemId) {
             storage.updateWishItem(this.currentEditingWishItemId, item);
@@ -1947,6 +2036,58 @@ class TaskManager {
             if (confirm('Are you sure you want to delete this wish list item?')) {
                 storage.deleteWishItem(this.currentEditingWishItemId);
                 this.closeWishItemModal();
+                this.renderWishList();
+            }
+        }
+    }
+
+    openWishListModal(listId: string | null = null): void {
+        this.currentEditingWishListId = listId;
+        const modal = document.getElementById('wishListModal')!;
+        const form = document.getElementById('wishListForm') as HTMLFormElement;
+        const deleteBtn = document.getElementById('deleteWishListBtn') as HTMLElement;
+
+        form.reset();
+        deleteBtn.style.display = 'none';
+
+        document.getElementById('wishListModalTitle')!.textContent = listId ? 'Edit List' : 'Add List';
+
+        if (listId) {
+            const list = storage.getWishLists().find(l => l.id === listId);
+            if (list) {
+                (document.getElementById('wishListName') as HTMLInputElement).value = list.name;
+                deleteBtn.style.display = 'block';
+            }
+        }
+
+        modal.classList.add('active');
+    }
+
+    closeWishListModal(): void {
+        document.getElementById('wishListModal')!.classList.remove('active');
+        this.currentEditingWishListId = null;
+    }
+
+    saveWishList(e: Event): void {
+        e.preventDefault();
+        const name = (document.getElementById('wishListName') as HTMLInputElement).value.trim();
+        if (!name) return;
+
+        if (this.currentEditingWishListId) {
+            storage.updateWishList(this.currentEditingWishListId, { name });
+        } else {
+            storage.addWishList({ name });
+        }
+
+        this.closeWishListModal();
+        this.renderWishList();
+    }
+
+    deleteWishListFromModal(): void {
+        if (this.currentEditingWishListId) {
+            if (confirm('Are you sure you want to delete this list? Items in this list will become uncategorized.')) {
+                storage.deleteWishList(this.currentEditingWishListId);
+                this.closeWishListModal();
                 this.renderWishList();
             }
         }
