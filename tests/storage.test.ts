@@ -748,6 +748,81 @@ describe('StorageManager', () => {
             expect(storage.getNotes()).toEqual([]);
         });
     });
+
+    // ========================
+    // Shopping List Management
+    // ========================
+    describe('shopping list management', () => {
+        it('should add a shopping item', () => {
+            const item = storage.addShoppingItem({ name: 'Milk', quantity: '2 litres' });
+            expect(item.id).toBeDefined();
+            expect(item.name).toBe('Milk');
+            expect(item.quantity).toBe('2 litres');
+            expect(item.completed).toBe(false);
+            expect(item.createdDate).toBeDefined();
+        });
+
+        it('should add a shopping item with only name', () => {
+            const item = storage.addShoppingItem({ name: 'Bread' });
+            expect(item.name).toBe('Bread');
+            expect(item.quantity).toBeUndefined();
+        });
+
+        it('should set default name to empty string when not provided', () => {
+            const item = storage.addShoppingItem({});
+            expect(item.name).toBe('');
+            expect(item.completed).toBe(false);
+        });
+
+        it('should get all shopping items sorted by creation date', () => {
+            storage.addShoppingItem({ name: 'Item A' });
+            storage.addShoppingItem({ name: 'Item B' });
+            storage.addShoppingItem({ name: 'Item C' });
+            const items = storage.getShoppingItems();
+            expect(items.length).toBe(3);
+        });
+
+        it('should update a shopping item', () => {
+            const item = storage.addShoppingItem({ name: 'Old Name', quantity: '1' });
+            const updated = storage.updateShoppingItem(item.id, { name: 'New Name', quantity: '3' });
+            expect(updated?.name).toBe('New Name');
+            expect(updated?.quantity).toBe('3');
+        });
+
+        it('should return undefined when updating non-existent shopping item', () => {
+            const result = storage.updateShoppingItem('nonexistent', { name: 'Test' });
+            expect(result).toBeUndefined();
+        });
+
+        it('should toggle completed on a shopping item', () => {
+            const item = storage.addShoppingItem({ name: 'Eggs' });
+            expect(item.completed).toBe(false);
+            const checked = storage.updateShoppingItem(item.id, { completed: true });
+            expect(checked?.completed).toBe(true);
+            const unchecked = storage.updateShoppingItem(item.id, { completed: false });
+            expect(unchecked?.completed).toBe(false);
+        });
+
+        it('should delete a shopping item', () => {
+            const item = storage.addShoppingItem({ name: 'To delete' });
+            storage.deleteShoppingItem(item.id);
+            expect(storage.getShoppingItems().length).toBe(0);
+        });
+
+        it('should clear only completed shopping items', () => {
+            storage.addShoppingItem({ name: 'Keep me' });
+            const done = storage.addShoppingItem({ name: 'Done item' });
+            storage.updateShoppingItem(done.id, { completed: true });
+            storage.clearCompletedShoppingItems();
+            const items = storage.getShoppingItems();
+            expect(items.length).toBe(1);
+            expect(items[0].name).toBe('Keep me');
+        });
+
+        it('should return empty array when no shopping items exist', () => {
+            expect(storage.getShoppingItems()).toEqual([]);
+        });
+    });
 });
 
 // ========================

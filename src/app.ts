@@ -2,7 +2,7 @@
 // Main Application Logic
 // ========================
 
-import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem, WishItem, Note, getDaysUntilDueText } from './storage.js';
+import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem, WishItem, Note, ShoppingItem, getDaysUntilDueText } from './storage.js';
 
 const FILTER_SETTINGS_KEY = 'taskManagerFilterSettings';
 
@@ -25,6 +25,7 @@ class TaskManager {
     currentEditingFinanceType: string | null = null;
     currentEditingWishItemId: string | null = null;
     currentEditingNoteId: string | null = null;
+    currentEditingShoppingItemId: string | null = null;
     dragSrcWishId: string | null = null;
     selectedDate: Date = new Date();
     tasksExpanded: boolean = false;
@@ -136,6 +137,13 @@ class TaskManager {
         document.getElementById('wishItemForm')!.addEventListener('submit', (e) => this.saveWishItem(e));
         document.getElementById('cancelWishItemBtn')!.addEventListener('click', () => this.closeWishItemModal());
         document.getElementById('deleteWishItemBtn')!.addEventListener('click', () => this.deleteWishItem());
+
+        // Shopping List section
+        document.getElementById('addShoppingItemBtn')!.addEventListener('click', () => this.openShoppingItemModal());
+        document.getElementById('shoppingItemForm')!.addEventListener('submit', (e) => this.saveShoppingItem(e));
+        document.getElementById('cancelShoppingItemBtn')!.addEventListener('click', () => this.closeShoppingItemModal());
+        document.getElementById('deleteShoppingItemBtn')!.addEventListener('click', () => this.deleteShoppingItem());
+        document.getElementById('clearCompletedShoppingBtn')!.addEventListener('click', () => this.clearCompletedShoppingItems());
 
         // Notes section
         document.getElementById('addNoteBtn')!.addEventListener('click', () => this.openNoteModal());
@@ -257,6 +265,8 @@ class TaskManager {
             this.renderFinances();
         } else if (tabName === 'wishlist') {
             this.renderWishList();
+        } else if (tabName === 'shopping') {
+            this.renderShoppingList();
         } else if (tabName === 'notes') {
             this.renderNotes();
         } else if (tabName === 'settings') {
@@ -1950,6 +1960,109 @@ class TaskManager {
                 this.renderWishList();
             }
         }
+    }
+
+    // ========================
+    // Shopping List
+    // ========================
+    renderShoppingList(): void {
+        const items = storage.getShoppingItems();
+        const container = document.getElementById('shoppingList')!;
+
+        if (items.length === 0) {
+            container.innerHTML = '<p class="empty-state">No items in your shopping list. Add one to get started!</p>';
+            return;
+        }
+
+        container.innerHTML = items.map(item => this.renderShoppingItem(item)).join('');
+
+        container.querySelectorAll<HTMLElement>('.shopping-item').forEach(el => {
+            el.querySelector('.shopping-item-checkbox')!.addEventListener('change', (e) => {
+                const checkbox = e.target as HTMLInputElement;
+                storage.updateShoppingItem(el.dataset.shoppingId!, { completed: checkbox.checked });
+                this.renderShoppingList();
+            });
+
+            el.querySelector('.edit-shopping-btn')!.addEventListener('click', () => {
+                this.openShoppingItemModal(el.dataset.shoppingId!);
+            });
+        });
+    }
+
+    renderShoppingItem(item: ShoppingItem): string {
+        const completedClass = item.completed ? ' completed' : '';
+        const checkedAttr = item.completed ? ' checked' : '';
+        const quantityHtml = item.quantity
+            ? `<div class="shopping-item-quantity">${this.escapeHtml(item.quantity)}</div>`
+            : '';
+        return `
+            <div class="shopping-item${completedClass}" data-shopping-id="${item.id}">
+                <input type="checkbox" class="shopping-item-checkbox" title="Mark as collected"${checkedAttr}>
+                <div class="shopping-item-content">
+                    <div class="shopping-item-name">${this.escapeHtml(item.name)}</div>
+                    ${quantityHtml}
+                </div>
+                <button class="btn btn-secondary edit-shopping-btn">Edit</button>
+            </div>
+        `;
+    }
+
+    openShoppingItemModal(itemId: string | null = null): void {
+        this.currentEditingShoppingItemId = itemId;
+        const modal = document.getElementById('shoppingItemModal')!;
+        const form = document.getElementById('shoppingItemForm') as HTMLFormElement;
+        const deleteBtn = document.getElementById('deleteShoppingItemBtn') as HTMLElement;
+
+        form.reset();
+        deleteBtn.style.display = 'none';
+
+        document.getElementById('shoppingItemModalTitle')!.textContent = itemId ? 'Edit Shopping Item' : 'Add Shopping Item';
+
+        if (itemId) {
+            const item = storage.getShoppingItems().find(s => s.id === itemId);
+            if (item) {
+                (document.getElementById('shoppingItemName') as HTMLInputElement).value = item.name;
+                (document.getElementById('shoppingItemQuantity') as HTMLInputElement).value = item.quantity || '';
+                deleteBtn.style.display = 'inline-block';
+            }
+        }
+
+        modal.classList.add('active');
+    }
+
+    closeShoppingItemModal(): void {
+        document.getElementById('shoppingItemModal')!.classList.remove('active');
+        this.currentEditingShoppingItemId = null;
+    }
+
+    saveShoppingItem(e: Event): void {
+        e.preventDefault();
+        const name = (document.getElementById('shoppingItemName') as HTMLInputElement).value.trim();
+        const quantity = (document.getElementById('shoppingItemQuantity') as HTMLInputElement).value.trim() || undefined;
+
+        if (this.currentEditingShoppingItemId) {
+            storage.updateShoppingItem(this.currentEditingShoppingItemId, { name, quantity });
+        } else {
+            storage.addShoppingItem({ name, quantity });
+        }
+
+        this.closeShoppingItemModal();
+        this.renderShoppingList();
+    }
+
+    deleteShoppingItem(): void {
+        if (this.currentEditingShoppingItemId) {
+            if (confirm('Are you sure you want to delete this shopping item?')) {
+                storage.deleteShoppingItem(this.currentEditingShoppingItemId);
+                this.closeShoppingItemModal();
+                this.renderShoppingList();
+            }
+        }
+    }
+
+    clearCompletedShoppingItems(): void {
+        storage.clearCompletedShoppingItems();
+        this.renderShoppingList();
     }
 
     // ========================
