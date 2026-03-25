@@ -145,7 +145,7 @@ test.describe('Task Manager App', () => {
             await page.click('#addProjectBtn');
             await page.fill('#projectName', 'Website Redesign');
             await page.fill('#projectDescription', 'Redo the company website');
-            await page.selectOption('#projectColor', 'green');
+            await page.fill('#projectColor', '#10b981');
             await page.click('#projectForm button[type="submit"]');
 
             await expect(page.locator('#projectModal')).not.toHaveClass(/active/);
