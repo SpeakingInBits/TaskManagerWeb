@@ -15,8 +15,6 @@ export interface Task {
     title: string;
     description?: string;
     dueDate?: string;
-    category?: string | null;
-    priority: 'low' | 'medium' | 'high';
     repeatType: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom' | 'movable';
     repeatUnit?: number;
     customRepeatDays?: number;
@@ -218,7 +216,6 @@ export class StorageManager {
             createdDate: new Date().toISOString(),
             completed: false,
             title: task.title || '',
-            priority: task.priority || 'medium',
             repeatType: task.repeatType || 'none',
         } as Task;
         data.tasks.push(newTask);
@@ -928,7 +925,6 @@ export class StorageManager {
         data.categories[idx] = trimmedNew;
 
         // Propagate rename to all item types
-        data.tasks = data.tasks.map(t => t.category === oldName ? { ...t, category: trimmedNew } : t);
         data.habits = data.habits.map(h => h.category === oldName ? { ...h, category: trimmedNew } : h);
         data.expenses = data.expenses.map(e => e.category === oldName ? { ...e, category: trimmedNew } : e);
         data.revenue = data.revenue.map(r => r.category === oldName ? { ...r, category: trimmedNew } : r);
@@ -950,7 +946,6 @@ export class StorageManager {
         data.categories.splice(idx, 1);
 
         // Clear category from all item types
-        data.tasks = data.tasks.map(t => t.category === categoryName ? { ...t, category: null } : t);
         data.habits = data.habits.map(h => h.category === categoryName ? { ...h, category: null } : h);
         data.expenses = data.expenses.map(e => e.category === categoryName ? { ...e, category: null } : e);
         data.revenue = data.revenue.map(r => r.category === categoryName ? { ...r, category: null } : r);

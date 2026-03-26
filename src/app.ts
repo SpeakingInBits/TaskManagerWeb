@@ -84,12 +84,7 @@ class TaskManager {
         document.getElementById('cancelTaskBtn')!.addEventListener('click', () => this.closeTaskModal());
         document.getElementById('deleteTaskBtn')!.addEventListener('click', () => this.deleteTask());
         document.getElementById('taskRepeatType')!.addEventListener('change', (e) => this.updateRepeatTypeUI((e.target as HTMLSelectElement).value));
-        document.getElementById('taskCategory')!.addEventListener('change', (e) => this.handleCategoryChange('task', (e.target as HTMLSelectElement).value));
-        document.getElementById('taskCategorySave')!.addEventListener('click', () => this.handleAddCategory('task'));
-        document.getElementById('taskCategoryCancel')!.addEventListener('click', () => this.cancelAddCategory('task'));
-        document.getElementById('categoryFilter')!.addEventListener('change', () => { this.filterTasks(); this.saveFilterSettings(); });
         document.getElementById('statusFilter')!.addEventListener('change', () => { this.filterTasks(); this.saveFilterSettings(); });
-        document.getElementById('groupBySelect')!.addEventListener('change', () => { this.filterTasks(); this.saveFilterSettings(); });
         document.getElementById('searchTasks')!.addEventListener('input', () => this.filterTasks());
         document.getElementById('hideCompletedBtn')!.addEventListener('click', () => this.toggleHideCompleted());
         document.getElementById('resetFiltersBtn')!.addEventListener('click', () => this.resetFilters());
@@ -457,10 +452,8 @@ class TaskManager {
     }
 
     saveFilterSettings(): void {
-        const categoryFilter = (document.getElementById('categoryFilter') as HTMLSelectElement).value;
         const statusFilter = (document.getElementById('statusFilter') as HTMLSelectElement).value;
-        const groupBy = (document.getElementById('groupBySelect') as HTMLSelectElement).value;
-        const settings = { categoryFilter, statusFilter, groupBy, hideCompleted: this.hideCompleted };
+        const settings = { statusFilter, hideCompleted: this.hideCompleted };
         localStorage.setItem(FILTER_SETTINGS_KEY, JSON.stringify(settings));
     }
 
@@ -469,12 +462,8 @@ class TaskManager {
         if (!raw) return;
         try {
             const settings = JSON.parse(raw);
-            const categoryFilter = document.getElementById('categoryFilter') as HTMLSelectElement;
             const statusFilter = document.getElementById('statusFilter') as HTMLSelectElement;
-            const groupBySelect = document.getElementById('groupBySelect') as HTMLSelectElement;
-            if (settings.categoryFilter !== undefined) categoryFilter.value = settings.categoryFilter;
             if (settings.statusFilter !== undefined) statusFilter.value = settings.statusFilter;
-            if (settings.groupBy !== undefined) groupBySelect.value = settings.groupBy;
             if (settings.hideCompleted) {
                 this.hideCompleted = true;
                 this.updateHideCompletedBtn();
@@ -485,9 +474,7 @@ class TaskManager {
     }
 
     resetFilters(): void {
-        (document.getElementById('categoryFilter') as HTMLSelectElement).value = '';
         (document.getElementById('statusFilter') as HTMLSelectElement).value = '';
-        (document.getElementById('groupBySelect') as HTMLSelectElement).value = '';
         (document.getElementById('searchTasks') as HTMLInputElement).value = '';
         this.hideCompleted = false;
         this.updateHideCompletedBtn();
@@ -504,25 +491,19 @@ class TaskManager {
     }
 
     renderTasks(): void {
-        this.updateCategoryFilter();
         this.filterTasks();
     }
 
     filterTasks(): void {
         const tasks = storage.getTasks();
-        const categoryFilter = (document.getElementById('categoryFilter') as HTMLSelectElement).value;
         const statusFilter = (document.getElementById('statusFilter') as HTMLSelectElement).value;
         const searchTerm = (document.getElementById('searchTasks') as HTMLInputElement).value.toLowerCase();
-        const groupBy = (document.getElementById('groupBySelect') as HTMLSelectElement).value;
         const today = this.getSelectedDateStr();
         const filtersActive = statusFilter || searchTerm;
 
         let filtered = tasks.filter(task => {
             // Hide completed filter
             if (this.hideCompleted && task.completed) return false;
-
-            // Category filter
-            if (categoryFilter && task.category !== categoryFilter) return false;
 
             // Status filter
             if (statusFilter) {
@@ -545,46 +526,9 @@ class TaskManager {
 
         let html = '';
 
-        if (groupBy === 'priority') {
-            const priorityLabels: Record<string, string> = { high: 'High Priority', medium: 'Medium Priority', low: 'Low Priority' };
-            const grouped: Record<string, typeof filtered> = { high: [], medium: [], low: [], ungrouped: [] };
-            filtered.forEach(task => {
-                if (task.priority && grouped[task.priority]) {
-                    grouped[task.priority].push(task);
-                } else {
-                    grouped['ungrouped'].push(task);
-                }
-            });
-            (['high', 'medium', 'low'] as const).forEach(p => {
-                if (grouped[p].length > 0) {
-                    html += `<h3 class="task-section-header">${priorityLabels[p]}</h3>`;
-                    html += grouped[p].map(task => this.renderTaskItem(task)).join('');
-                }
-            });
-            if (grouped['ungrouped'].length > 0) {
-                html += `<h3 class="task-section-header">Ungrouped</h3>`;
-                html += grouped['ungrouped'].map(task => this.renderTaskItem(task)).join('');
-            }
-        } else if (groupBy === 'category') {
-            const withCategory = filtered.filter(task => task.category);
-            const withoutCategory = filtered.filter(task => !task.category);
-            const categories = [...new Set(withCategory.map(task => task.category as string))].sort();
-            categories.forEach(cat => {
-                const group = withCategory.filter(task => task.category === cat);
-                if (group.length > 0) {
-                    html += `<h3 class="task-section-header">${cat}</h3>`;
-                    html += group.map(task => this.renderTaskItem(task)).join('');
-                }
-            });
-            if (withoutCategory.length > 0) {
-                html += `<h3 class="task-section-header">Ungrouped</h3>`;
-                html += withoutCategory.map(task => this.renderTaskItem(task)).join('');
-            }
-        } else if (filtersActive) {
+        if (filtersActive) {
             html = filtered.map(task => this.renderTaskItem(task)).join('');
         } else {
-            const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
             const overdue = filtered.filter(task =>
                 !task.completed && task.dueDate && task.dueDate < today
             );
@@ -603,7 +547,7 @@ class TaskManager {
                 .sort((a, b) => {
                     if (a.dueDate! < b.dueDate!) return -1;
                     if (a.dueDate! > b.dueDate!) return 1;
-                    return (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1);
+                    return a.title.localeCompare(b.title);
                 });
 
             const noDueDate = filtered.filter(task => !task.dueDate);
@@ -672,9 +616,7 @@ class TaskManager {
                     <div class="task-title">${task.title}</div>
                     ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
                     <div class="task-meta">
-                        ${task.category ? `<span class="task-meta-item">📂 ${task.category}</span>` : ''}
                         ${task.dueDate ? `<span class="task-meta-item">📅 ${task.dueDate}</span>` : ''}
-                        <span class="task-meta-item"><span class="task-priority ${task.priority}"></span>${task.priority}</span>
                         ${task.repeatType !== 'none' ? `<span class="task-meta-item">🔁 ${task.repeatType}</span>` : ''}
                     </div>
                 </div>
@@ -682,16 +624,6 @@ class TaskManager {
                 ${dueBadge}
             </div>
         `;
-    }
-
-    updateCategoryFilter(): void {
-        const tasks = storage.getTasks();
-        const categories = [...new Set(tasks.map(t => t.category).filter((c): c is string => !!c))];
-        const select = document.getElementById('categoryFilter') as HTMLSelectElement;
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">All Categories</option>' +
-            categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-        select.value = currentValue;
     }
 
     openTaskModal(taskId: string | null = null): void {
@@ -717,8 +649,6 @@ class TaskManager {
                 (document.getElementById('taskTitle') as HTMLInputElement).value = task.title;
                 (document.getElementById('taskDescription') as HTMLTextAreaElement).value = task.description || '';
                 (document.getElementById('taskDueDate') as HTMLInputElement).value = task.dueDate || '';
-                (document.getElementById('taskCategory') as HTMLSelectElement).value = task.category || '';
-                (document.getElementById('taskPriority') as HTMLSelectElement).value = task.priority || 'medium';
                 (document.getElementById('taskRepeatType') as HTMLSelectElement).value = task.repeatType || 'none';
                 (document.getElementById('taskProject') as HTMLSelectElement).value = task.projectId || '';
                 (document.getElementById('taskRepeatUnit') as HTMLInputElement).value = String(task.repeatUnit || 1);
@@ -747,9 +677,6 @@ class TaskManager {
         } else {
             (document.getElementById('taskRepeatUnit') as HTMLInputElement).value = '1';
         }
-
-        // Load categories
-        this.loadCategoryDropdown('task');
 
         modal.classList.add('active');
     }
@@ -810,8 +737,6 @@ class TaskManager {
             title: (document.getElementById('taskTitle') as HTMLInputElement).value,
             description: (document.getElementById('taskDescription') as HTMLTextAreaElement).value,
             dueDate: (document.getElementById('taskDueDate') as HTMLInputElement).value,
-            category: (document.getElementById('taskCategory') as HTMLSelectElement).value,
-            priority: (document.getElementById('taskPriority') as HTMLSelectElement).value as Task['priority'],
             repeatType: (document.getElementById('taskRepeatType') as HTMLSelectElement).value as Task['repeatType'],
             projectId: (document.getElementById('taskProject') as HTMLSelectElement).value || null
         };
@@ -930,8 +855,6 @@ class TaskManager {
         const newTask: Partial<Task> = {
             title: completedTask.title,
             description: completedTask.description,
-            category: completedTask.category,
-            priority: completedTask.priority,
             projectId: completedTask.projectId,
             repeatType: completedTask.repeatType,
             repeatUnit: completedTask.repeatUnit,
@@ -1117,8 +1040,6 @@ class TaskManager {
                     <div class="task-title">${task.title}</div>
                     <div class="task-meta">
                         ${task.dueDate ? `<span>📅 ${task.dueDate}</span>` : ''}
-                        ${task.priority ? `<span class="priority-${task.priority}">⚡ ${task.priority}</span>` : ''}
-                        ${task.category ? `<span>📂 ${task.category}</span>` : ''}
                     </div>
                 </div>
             </div>
