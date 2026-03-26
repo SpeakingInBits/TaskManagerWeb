@@ -113,7 +113,6 @@ class TaskManager {
         // Finances section
         document.getElementById('addExpenseBtn')!.addEventListener('click', () => this.openFinanceModal('expense'));
         document.getElementById('addRevenueBtn')!.addEventListener('click', () => this.openFinanceModal('revenue'));
-        document.getElementById('addChargeBtn')!.addEventListener('click', () => this.openFinanceModal('charge'));
         document.getElementById('financeForm')!.addEventListener('submit', (e) => this.saveFinance(e));
         document.getElementById('cancelFinanceBtn')!.addEventListener('click', () => this.closeFinanceModal());
         document.getElementById('deleteFinanceBtn')!.addEventListener('click', () => this.deleteFinance());
@@ -1556,21 +1555,19 @@ class TaskManager {
         this.updateFinanceSummary();
         this.renderExpenses();
         this.renderRevenue();
-        this.renderCharges();
+        this.renderCharts();
     }
 
     updateFinanceSummary(): void {
         const expenses = this.filterFinanceItemsByDate(storage.getExpenses());
         const revenue = this.filterFinanceItemsByDate(storage.getRevenue());
-        const charges = this.filterFinanceItemsByDate(storage.getCharges());
 
         const totalExpenses = expenses.reduce((sum, e) => sum + (e.monthlyAmount || 0), 0);
-        const totalCharges = charges.reduce((sum, c) => sum + (c.monthlyAmount || 0), 0);
         const totalRevenue = revenue.reduce((sum, r) => sum + (r.monthlyAmount || 0), 0);
-        const net = totalRevenue - totalExpenses - totalCharges;
+        const net = totalRevenue - totalExpenses;
 
         document.getElementById('totalIncome')!.textContent = '$' + totalRevenue.toFixed(2);
-        document.getElementById('totalExpenses')!.textContent = '$' + (totalExpenses + totalCharges).toFixed(2);
+        document.getElementById('totalExpenses')!.textContent = '$' + totalExpenses.toFixed(2);
         document.getElementById('netBalance')!.textContent = '$' + net.toFixed(2);
     }
 
@@ -1584,9 +1581,153 @@ class TaskManager {
         this.renderFinanceList(revenue, 'revenueList', 'revenue', true);
     }
 
-    renderCharges(): void {
-        const charges = this.filterFinanceItemsByDate(storage.getCharges());
-        this.renderFinanceList(charges, 'chargesList', 'charge');
+    renderCharts(): void {
+        this.renderExpensePieChart();
+        this.renderSankeyDiagram();
+    }
+
+    renderExpensePieChart(): void {
+        const container = document.getElementById('expensePieChart')!;
+        const expenses = this.filterFinanceItemsByDate(storage.getExpenses());
+
+        if (expenses.length === 0) {
+            container.innerHTML = '<p class="empty-state">No expenses to visualize.</p>';
+            return;
+        }
+
+        const categoryTotals: Record<string, number> = {};
+        for (const item of expenses) {
+            const cat = item.category || 'Uncategorized';
+            categoryTotals[cat] = (categoryTotals[cat] || 0) + (item.monthlyAmount || 0);
+        }
+
+        const entries = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+        const total = entries.reduce((s, [, v]) => s + v, 0);
+
+        const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+        const cx = 140, cy = 140, r = 120;
+        let currentAngle = -Math.PI / 2;
+
+        const slices = entries.map(([cat, val], i) => {
+            const angle = (val / total) * 2 * Math.PI;
+            const x1 = cx + r * Math.cos(currentAngle);
+            const y1 = cy + r * Math.sin(currentAngle);
+            currentAngle += angle;
+            const x2 = cx + r * Math.cos(currentAngle);
+            const y2 = cy + r * Math.sin(currentAngle);
+            const largeArc = angle > Math.PI ? 1 : 0;
+            const path = `M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`;
+            return { path, color: colors[i % colors.length], cat, val };
+        });
+
+        const legendRows = entries.map(([cat, val], i) => `
+            <div class="pie-legend-item">
+                <span class="pie-legend-dot" style="background:${colors[i % colors.length]}"></span>
+                <span class="pie-legend-label">${cat}</span>
+                <span class="pie-legend-value">$${val.toFixed(2)} (${((val / total) * 100).toFixed(1)}%)</span>
+            </div>`).join('');
+
+        container.innerHTML = `
+            <div class="pie-chart-wrap">
+                <svg viewBox="0 0 280 280" class="pie-svg">
+                    ${slices.map(s => `<path d="${s.path}" fill="${s.color}" stroke="white" stroke-width="2">
+                        <title>${s.cat}: $${s.val.toFixed(2)}</title>
+                    </path>`).join('')}
+                </svg>
+                <div class="pie-legend">${legendRows}</div>
+            </div>`;
+    }
+
+    renderSankeyDiagram(): void {
+        const container = document.getElementById('sankeyChart')!;
+        const expenses = this.filterFinanceItemsByDate(storage.getExpenses());
+        const revenue = this.filterFinanceItemsByDate(storage.getRevenue());
+
+        if (expenses.length === 0 && revenue.length === 0) {
+            container.innerHTML = '<p class="empty-state">No data to visualize.</p>';
+            return;
+        }
+
+        const revenueTotals: Record<string, number> = {};
+        for (const item of revenue) {
+            const cat = item.category || item.description || 'Income';
+            revenueTotals[cat] = (revenueTotals[cat] || 0) + (item.monthlyAmount || 0);
+        }
+
+        const expenseTotals: Record<string, number> = {};
+        for (const item of expenses) {
+            const cat = item.category || 'Uncategorized';
+            expenseTotals[cat] = (expenseTotals[cat] || 0) + (item.monthlyAmount || 0);
+        }
+
+        const totalRevenue = Object.values(revenueTotals).reduce((s, v) => s + v, 0);
+        const totalExpenses = Object.values(expenseTotals).reduce((s, v) => s + v, 0);
+        const totalFlow = Math.max(totalRevenue, totalExpenses, 0.01);
+
+        const svgW = 560, svgH = 320;
+        const nodeW = 14, lx = 20, rx = svgW - nodeW - 20;
+        const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+        const incomeColor = '#10b981';
+        const padding = 8;
+
+        const revEntries = Object.entries(revenueTotals);
+        const expEntries = Object.entries(expenseTotals);
+
+        const totalLeftH = svgH - padding * (revEntries.length - 1);
+        const totalRightH = svgH - padding * (expEntries.length - 1);
+
+        let leftY = 0;
+        const leftNodes = revEntries.map(([cat, val]) => {
+            const h = Math.max(4, (val / totalFlow) * totalLeftH);
+            const node = { cat, val, y: leftY, h };
+            leftY += h + padding;
+            return node;
+        });
+
+        let rightY = 0;
+        const rightNodes = expEntries.map(([cat, val], i) => {
+            const h = Math.max(4, (val / totalFlow) * totalRightH);
+            const node = { cat, val, y: rightY, h, color: colors[i % colors.length] };
+            rightY += h + padding;
+            return node;
+        });
+
+        const leftPaths = leftNodes.map(ln => {
+            // Each income source distributes proportionally across all expense categories
+            let flowY = ln.y;
+            return rightNodes.map(rn => {
+                // Proportional share: income node's share of total * expense node's share of total
+                const flowFraction = (ln.val / totalFlow) * (rn.val / totalFlow) * totalFlow;
+                const flowH = Math.max(1, (flowFraction / totalFlow) * totalLeftH);
+                const x1 = lx + nodeW;
+                const y1top = flowY;
+                const y1bot = flowY + flowH;
+                const y2top = rn.y + (rn.h * (ln.y / (leftY || 1)));
+                const y2bot = y2top + flowH;
+                const mx = x1 + (rx - x1) * 0.5;
+                const topPath = `M${x1},${y1top} C${mx},${y1top} ${mx},${y2top} ${rx},${y2top}`;
+                const botPath = `L${rx},${y2bot} C${mx},${y2bot} ${mx},${y1bot} ${x1},${y1bot}`;
+                flowY += flowH;
+                return `<path d="${topPath} ${botPath} Z" fill="${rn.color}" fill-opacity="0.35" stroke="none"/>`;
+            }).join('');
+        }).join('');
+
+        const leftRects = leftNodes.map(n =>
+            `<rect x="${lx}" y="${n.y}" width="${nodeW}" height="${n.h}" fill="${incomeColor}" rx="2"/>
+             <text x="${lx + nodeW + 6}" y="${n.y + n.h / 2}" class="sankey-label" dominant-baseline="middle">${n.cat} ($${n.val.toFixed(0)})</text>`
+        ).join('');
+
+        const rightRects = rightNodes.map(n =>
+            `<rect x="${rx}" y="${n.y}" width="${nodeW}" height="${n.h}" fill="${n.color}" rx="2"/>
+             <text x="${rx - 6}" y="${n.y + n.h / 2}" class="sankey-label" text-anchor="end" dominant-baseline="middle">${n.cat} ($${n.val.toFixed(0)})</text>`
+        ).join('');
+
+        container.innerHTML = `
+            <svg viewBox="0 0 ${svgW} ${svgH}" class="sankey-svg">
+                ${leftPaths}
+                ${leftRects}
+                ${rightRects}
+            </svg>`;
     }
 
     renderFinanceList(items: FilteredFinanceItem[], containerId: string, type: string, isIncome: boolean = false): void {
@@ -1640,14 +1781,13 @@ class TaskManager {
 
         recurringGroup.style.display = ['expense', 'revenue'].includes(type) ? 'block' : 'none';
 
-        const titles: Record<string, string> = { expense: 'Add Expense', revenue: 'Add Revenue', charge: 'Add Other Charge' };
+        const titles: Record<string, string> = { expense: 'Add Expense', revenue: 'Add Revenue' };
         document.getElementById('financeModalTitle')!.textContent = financeId ? `Edit ${type}` : titles[type];
 
         if (financeId) {
             let item: FinanceItem | undefined;
             if (type === 'expense') item = storage.getExpenses().find(e => e.id === financeId);
             else if (type === 'revenue') item = storage.getRevenue().find(r => r.id === financeId);
-            else if (type === 'charge') item = storage.getCharges().find(c => c.id === financeId);
 
             if (item) {
                 (document.getElementById('financeDescription') as HTMLInputElement).value = item.description;
@@ -1696,12 +1836,6 @@ class TaskManager {
             } else {
                 storage.addRevenue(financeItem);
             }
-        } else if (this.currentEditingFinanceType === 'charge') {
-            if (this.currentEditingFinanceId) {
-                storage.updateCharge(this.currentEditingFinanceId, financeItem);
-            } else {
-                storage.addCharge(financeItem);
-            }
         }
 
         this.closeFinanceModal();
@@ -1715,8 +1849,6 @@ class TaskManager {
                     storage.deleteExpense(this.currentEditingFinanceId);
                 } else if (this.currentEditingFinanceType === 'revenue') {
                     storage.deleteRevenue(this.currentEditingFinanceId);
-                } else if (this.currentEditingFinanceType === 'charge') {
-                    storage.deleteCharge(this.currentEditingFinanceId);
                 }
                 this.closeFinanceModal();
                 this.renderFinances();
