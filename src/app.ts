@@ -28,6 +28,7 @@ class TaskManager {
     currentEditingNoteId: string | null = null;
     currentEditingShoppingItemId: string | null = null;
     dragSrcWishId: string | null = null;
+    expandedWishLists: Set<string> = new Set();
     selectedDate: Date = new Date();
     tasksExpanded: boolean = false;
     hideCompleted: boolean = false;
@@ -1889,13 +1890,14 @@ class TaskManager {
         // Render each named list group
         lists.forEach(list => {
             const listItems = allItems.filter(i => i.listId === list.id);
-            html += this.renderWishListGroup(list.id, list.name, listItems, true);
+            const isExpanded = this.expandedWishLists.has(list.id);
+            html += this.renderWishListGroup(list.id, list.name, listItems, true, isExpanded);
         });
 
         // Render uncategorized items (no listId or listId is null)
         const uncategorized = allItems.filter(i => !i.listId);
         if (uncategorized.length > 0 || lists.length === 0) {
-            html += this.renderWishListGroup(null, 'Uncategorized', uncategorized, false);
+            html += this.renderWishListGroup(null, 'Uncategorized', uncategorized, false, true);
         }
 
         container.innerHTML = html;
@@ -1914,6 +1916,19 @@ class TaskManager {
                 if (editBtn) {
                     editBtn.addEventListener('click', () => this.openWishListModal(list.id));
                 }
+                const collapseBtn = groupEl.querySelector<HTMLElement>('.wish-list-collapse-btn');
+                if (collapseBtn) {
+                    collapseBtn.addEventListener('click', () => {
+                        const isNowCollapsed = groupEl.classList.toggle('collapsed');
+                        if (isNowCollapsed) {
+                            this.expandedWishLists.delete(list.id);
+                        } else {
+                            this.expandedWishLists.add(list.id);
+                        }
+                        const icon = collapseBtn.querySelector<HTMLElement>('.wish-list-collapse-icon');
+                        if (icon) icon.textContent = isNowCollapsed ? '▶' : '▼';
+                    });
+                }
             }
         });
 
@@ -1929,18 +1944,29 @@ class TaskManager {
         }
     }
 
-    renderWishListGroup(listId: string | null, name: string, items: WishItem[], hasEditBtn: boolean): string {
+    renderWishListGroup(listId: string | null, name: string, items: WishItem[], hasEditBtn: boolean, isExpanded: boolean = true): string {
         const dataAttr = listId ? `data-list-id="${listId}"` : 'data-list-id="uncategorized"';
         const editBtnHtml = hasEditBtn
             ? `<button class="btn btn-secondary wish-list-edit-btn" title="Edit list">Edit</button>`
+            : '';
+        const unpurchasedCount = items.filter(i => !i.completed).length;
+        const counterHtml = `<span class="wish-list-group-counter">${unpurchasedCount} remaining</span>`;
+        const collapsedClass = !isExpanded ? ' collapsed' : '';
+        const toggleIcon = isExpanded ? '▼' : '▶';
+        const toggleBtnHtml = hasEditBtn
+            ? `<button class="btn wish-list-collapse-btn" title="Toggle collapse"><span class="wish-list-collapse-icon">${toggleIcon}</span></button>`
             : '';
         const itemsHtml = items.length > 0
             ? items.map(item => this.renderWishItem(item)).join('')
             : `<p class="empty-state wish-list-empty">No items yet. Click "+ Add" to add one.</p>`;
         return `
-            <div class="wish-list-group" ${dataAttr}>
+            <div class="wish-list-group${collapsedClass}" ${dataAttr}>
                 <div class="wish-list-group-header">
-                    <span class="wish-list-group-name">${name}</span>
+                    <div class="wish-list-group-title">
+                        ${toggleBtnHtml}
+                        <span class="wish-list-group-name">${name}</span>
+                        ${counterHtml}
+                    </div>
                     <div class="wish-list-group-actions">
                         ${editBtnHtml}
                         <button class="btn btn-primary wish-list-group-add-btn">+ Add</button>

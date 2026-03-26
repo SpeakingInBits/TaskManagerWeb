@@ -1624,10 +1624,52 @@ html, body {
     border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
+.wish-list-group-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .wish-list-group-name {
     font-weight: 700;
     font-size: 1rem;
     color: var(--text-primary, #333);
+}
+
+.wish-list-group-counter {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    background: var(--bg-tertiary, #e8e8e8);
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.wish-list-collapse-btn {
+    background: none;
+    border: none;
+    padding: 0.15rem 0.35rem;
+    cursor: pointer;
+    color: var(--text-secondary, #666);
+    font-size: 0.75rem;
+    line-height: 1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wish-list-collapse-btn:hover {
+    background: var(--border-color, #e0e0e0);
+}
+
+.wish-list-group.collapsed .wish-list {
+    display: none;
+}
+
+.wish-list-group.collapsed .wish-list-group-header {
+    border-bottom: none;
 }
 
 .wish-list-group-actions {
