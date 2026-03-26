@@ -292,7 +292,6 @@ test.describe('Task Manager App', () => {
                     id: 'overdue-test-1',
                     title: 'Overdue Task',
                     dueDate: dueDate,
-                    priority: 'medium',
                     repeatType: 'none',
                     completed: false,
                     createdDate: new Date().toISOString()
@@ -318,7 +317,6 @@ test.describe('Task Manager App', () => {
                     id: 'completed-overdue-1',
                     title: 'Completed Old Task',
                     dueDate: dueDate,
-                    priority: 'medium',
                     repeatType: 'none',
                     completed: true,
                     completedDate: dueDate,
@@ -343,56 +341,6 @@ test.describe('Task Manager App', () => {
             await expect(page.locator('#tasks-tab')).toBeVisible();
             const filterValue = await page.locator('#statusFilter').inputValue();
             expect(filterValue).toBe('overdue');
-        });
-    });
-
-    // ========================
-    // Task Group By
-    // ========================
-    test.describe('task group by', () => {
-        test.beforeEach(async ({ page }) => {
-            // Add tasks with different priorities and categories via localStorage
-            await page.evaluate(() => {
-                const data = JSON.parse(localStorage.getItem('taskManagerData') || '{}');
-                data.tasks = [
-                    { id: 'task-high', title: 'High Task', priority: 'high', repeatType: 'none', completed: false, createdDate: new Date().toISOString(), category: 'Work' },
-                    { id: 'task-medium', title: 'Medium Task', priority: 'medium', repeatType: 'none', completed: false, createdDate: new Date().toISOString(), category: 'Personal' },
-                    { id: 'task-low', title: 'Low Task', priority: 'low', repeatType: 'none', completed: false, createdDate: new Date().toISOString() },
-                ];
-                localStorage.setItem('taskManagerData', JSON.stringify(data));
-            });
-            await page.reload();
-            await page.waitForSelector('.header');
-            await page.click('[data-tab="tasks"]');
-        });
-
-        test('should show group by dropdown', async ({ page }) => {
-            await expect(page.locator('#groupBySelect')).toBeVisible();
-        });
-
-        test('should group tasks by priority', async ({ page }) => {
-            await page.selectOption('#groupBySelect', 'priority');
-            const headers = page.locator('.task-section-header');
-            await expect(headers).toHaveCount(3);
-            await expect(headers.nth(0)).toHaveText('High Priority');
-            await expect(headers.nth(1)).toHaveText('Medium Priority');
-            await expect(headers.nth(2)).toHaveText('Low Priority');
-        });
-
-        test('should group tasks by category', async ({ page }) => {
-            await page.selectOption('#groupBySelect', 'category');
-            const headers = page.locator('.task-section-header');
-            await expect(headers).toHaveCount(3);
-            await expect(headers.nth(0)).toHaveText('Personal');
-            await expect(headers.nth(1)).toHaveText('Work');
-            await expect(headers.nth(2)).toHaveText('Ungrouped');
-        });
-
-        test('should revert to default grouping when no grouping selected', async ({ page }) => {
-            await page.selectOption('#groupBySelect', 'priority');
-            await page.selectOption('#groupBySelect', '');
-            // Default view shows no task-section-header for tasks with no due date
-            await expect(page.locator('.task-item')).toHaveCount(3);
         });
     });
 
@@ -445,15 +393,6 @@ test.describe('Task Manager App', () => {
             expect(value).toBe('completed');
         });
 
-        test('should persist groupBy filter across page reloads', async ({ page }) => {
-            await page.selectOption('#groupBySelect', 'priority');
-            await page.reload();
-            await page.waitForSelector('.header');
-            await page.click('[data-tab="tasks"]');
-            const value = await page.locator('#groupBySelect').inputValue();
-            expect(value).toBe('priority');
-        });
-
         test('should persist hideCompleted state across page reloads', async ({ page }) => {
             await page.click('#hideCompletedBtn');
             await expect(page.locator('#hideCompletedBtn')).toContainText('Show Completed');
@@ -465,15 +404,12 @@ test.describe('Task Manager App', () => {
 
         test('should reset all filters when Reset Filters is clicked', async ({ page }) => {
             await page.selectOption('#statusFilter', 'pending');
-            await page.selectOption('#groupBySelect', 'category');
             await page.click('#hideCompletedBtn');
 
             await page.click('#resetFiltersBtn');
 
             const statusValue = await page.locator('#statusFilter').inputValue();
-            const groupByValue = await page.locator('#groupBySelect').inputValue();
             expect(statusValue).toBe('');
-            expect(groupByValue).toBe('');
             await expect(page.locator('#hideCompletedBtn')).toContainText('Hide Completed');
         });
 
