@@ -1027,6 +1027,89 @@ html, body {
 }
 
 /* ========================
+   Finance Charts
+   ======================== */
+.finance-charts {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.chart-section {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+}
+
+.chart-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+.chart-container {
+    width: 100%;
+}
+
+.pie-chart-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.pie-svg {
+    width: 200px;
+    height: 200px;
+    flex-shrink: 0;
+}
+
+.pie-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 160px;
+}
+
+.pie-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.pie-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.pie-legend-label {
+    flex: 1;
+    color: var(--text-color);
+}
+
+.pie-legend-value {
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+.sankey-svg {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+}
+
+.sankey-label {
+    font-size: 11px;
+    fill: var(--text-color);
+}
+
+/* ========================
    Buttons
    ======================== */
 .btn {
@@ -1714,4 +1797,95 @@ html, body {
     resize: vertical;
     font-family: inherit;
     font-size: 0.95rem;
+}
+
+/* ========================
+   Shopping List
+   ======================== */
+.shopping-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.shopping-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.shopping-header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.shopping-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.shopping-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #fff;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: box-shadow 0.2s, opacity 0.2s;
+}
+
+.shopping-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.shopping-item-checkbox {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--primary-color, #4CAF50);
+}
+
+.shopping-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.shopping-item-name {
+    font-weight: 600;
+    font-size: 1rem;
+    word-break: break-word;
+}
+
+.shopping-item-quantity {
+    font-size: 0.875rem;
+    color: #666;
+    margin-top: 0.1rem;
+}
+
+.shopping-item.completed .shopping-item-name {
+    text-decoration: line-through;
+    color: #aaa;
+}
+
+.shopping-item.completed {
+    opacity: 0.7;
+}
+
+@media (max-width: 480px) {
+    .shopping-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .shopping-header-actions {
+        width: 100%;
+    }
+
+    .shopping-header-actions .btn {
+        flex: 1;
+    }
 }

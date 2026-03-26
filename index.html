@@ -61,6 +61,7 @@
             <button class="nav-tab" data-tab="projects">📁 Projects</button>
             <button class="nav-tab" data-tab="habits">⭐ Habits</button>
             <button class="nav-tab" data-tab="wishlist">🎁 Wish List</button>
+            <button class="nav-tab" data-tab="shopping">🛒 Shopping</button>
             <button class="nav-tab" data-tab="notes">📝 Notes</button>
             <button class="nav-tab" data-tab="finances">💰 Finances</button>
             <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
@@ -436,7 +437,6 @@
                         <div class="finance-buttons">
                             <button class="btn btn-success" id="addExpenseBtn">+ Add Expense</button>
                             <button class="btn btn-success" id="addRevenueBtn">+ Add Revenue</button>
-                            <button class="btn btn-primary" id="addChargeBtn">+ Add Other Charge</button>
                         </div>
                     </div>
 
@@ -468,11 +468,11 @@
                         <button class="btn btn-secondary" id="nextMonthBtn" style="margin-left: 0.5rem;">Next &#8250;</button>
                     </div>
 
-                    <!-- Tabs for Expenses, Revenue, Other Charges -->
+                    <!-- Tabs for Expenses, Revenue, Charts -->
                     <div class="finance-tabs">
                         <button class="finance-tab active" data-finance-tab="expenses">Expenses</button>
                         <button class="finance-tab" data-finance-tab="revenue">Revenue</button>
-                        <button class="finance-tab" data-finance-tab="charges">Other Charges</button>
+                        <button class="finance-tab" data-finance-tab="charts">Charts</button>
                     </div>
 
                     <!-- Expenses List -->
@@ -489,10 +489,17 @@
                         </div>
                     </div>
 
-                    <!-- Other Charges List -->
-                    <div class="finance-content" id="charges-content">
-                        <div class="finance-list" id="chargesList">
-                            <p class="empty-state">No charges yet. Add one to track other expenses!</p>
+                    <!-- Charts -->
+                    <div class="finance-content" id="charts-content">
+                        <div class="finance-charts">
+                            <div class="chart-section">
+                                <h3 class="chart-title">Expenses by Category</h3>
+                                <div id="expensePieChart" class="chart-container"></div>
+                            </div>
+                            <div class="chart-section">
+                                <h3 class="chart-title">Income &amp; Spending Flow</h3>
+                                <div id="sankeyChart" class="chart-container"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -655,6 +662,48 @@
                                 <button type="submit" class="btn btn-primary">Save</button>
                                 <button type="button" class="btn btn-secondary" id="deleteNoteBtn" style="display: none;">Delete</button>
                                 <button type="button" class="btn btn-secondary" id="cancelNoteBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Shopping List Tab -->
+            <section class="tab-content" id="shopping-tab">
+                <div class="shopping-container">
+                    <div class="shopping-header">
+                        <h2>🛒 Shopping List</h2>
+                        <div class="shopping-header-actions">
+                            <button class="btn btn-secondary" id="clearCompletedShoppingBtn">Clear Checked</button>
+                            <button class="btn btn-primary" id="addShoppingItemBtn">+ Add Item</button>
+                        </div>
+                    </div>
+
+                    <div class="shopping-list" id="shoppingList">
+                        <p class="empty-state">No items in your shopping list. Add one to get started!</p>
+                    </div>
+                </div>
+
+                <!-- Shopping Item Modal -->
+                <div class="modal" id="shoppingItemModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="shoppingItemModalTitle">Add Shopping Item</h3>
+                            <button class="close-btn">&times;</button>
+                        </div>
+                        <form id="shoppingItemForm">
+                            <div class="form-group">
+                                <label for="shoppingItemName">Item Name *</label>
+                                <input type="text" id="shoppingItemName" required placeholder="e.g. Milk">
+                            </div>
+                            <div class="form-group">
+                                <label for="shoppingItemQuantity">Quantity (optional)</label>
+                                <input type="text" id="shoppingItemQuantity" placeholder="e.g. 2 litres">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save</button>
+                                <button type="button" class="btn btn-secondary" id="deleteShoppingItemBtn" style="display: none;">Delete</button>
+                                <button type="button" class="btn btn-secondary" id="cancelShoppingItemBtn">Cancel</button>
                             </div>
                         </form>
                     </div>

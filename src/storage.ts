@@ -92,6 +92,14 @@ export interface Note {
     updatedDate?: string;
 }
 
+export interface ShoppingItem {
+    id: string;
+    name: string;
+    quantity?: string;
+    completed: boolean;
+    createdDate: string;
+}
+
 export interface UserStats {
     level: number;
     dailyStreak: number;
@@ -124,6 +132,7 @@ export interface AppData {
     wishList: WishItem[];
     wishLists: WishList[];
     notes: Note[];
+    shoppingList: ShoppingItem[];
 }
 
 export interface ValidationResult {
@@ -178,7 +187,8 @@ export class StorageManager {
             },
             wishList: [],
             wishLists: [],
-            notes: []
+            notes: [],
+            shoppingList: []
         };
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
@@ -661,6 +671,55 @@ export class StorageManager {
         );
     }
 
+    // Shopping List Management
+    addShoppingItem(item: Partial<ShoppingItem>): ShoppingItem {
+        const data = this.getData();
+        if (!data.shoppingList) data.shoppingList = [];
+        const newItem: ShoppingItem = {
+            id: this.generateId(),
+            name: item.name || '',
+            quantity: item.quantity,
+            completed: false,
+            createdDate: new Date().toISOString(),
+        };
+        data.shoppingList.push(newItem);
+        this.saveData(data);
+        return newItem;
+    }
+
+    updateShoppingItem(itemId: string, updates: Partial<ShoppingItem>): ShoppingItem | undefined {
+        const data = this.getData();
+        if (!data.shoppingList) data.shoppingList = [];
+        const item = data.shoppingList.find(s => s.id === itemId);
+        if (item) {
+            Object.assign(item, updates);
+            this.saveData(data);
+        }
+        return item;
+    }
+
+    deleteShoppingItem(itemId: string): void {
+        const data = this.getData();
+        if (!data.shoppingList) data.shoppingList = [];
+        data.shoppingList = data.shoppingList.filter(s => s.id !== itemId);
+        this.saveData(data);
+    }
+
+    getShoppingItems(): ShoppingItem[] {
+        const data = this.getData();
+        if (!data.shoppingList) return [];
+        return data.shoppingList.slice().sort((a, b) =>
+            new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime()
+        );
+    }
+
+    clearCompletedShoppingItems(): void {
+        const data = this.getData();
+        if (!data.shoppingList) return;
+        data.shoppingList = data.shoppingList.filter(s => !s.completed);
+        this.saveData(data);
+    }
+
     updateLevel(): void {
         const data = this.getData();
         const settings = this.getSettings();
@@ -788,6 +847,7 @@ export class StorageManager {
             wishList: Array.isArray(data.wishList) ? data.wishList : [],
             wishLists: Array.isArray(data.wishLists) ? data.wishLists : [],
             notes: Array.isArray(data.notes) ? data.notes : [],
+            shoppingList: Array.isArray(data.shoppingList) ? data.shoppingList : [],
         };
     }
 
