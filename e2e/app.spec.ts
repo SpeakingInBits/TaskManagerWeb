@@ -227,8 +227,8 @@ test.describe('Task Manager App', () => {
             await page.click('[data-finance-tab="revenue"]');
             await expect(page.locator('#revenue-content')).toHaveClass(/active/);
 
-            await page.click('[data-finance-tab="charges"]');
-            await expect(page.locator('#charges-content')).toHaveClass(/active/);
+            await page.click('[data-finance-tab="charts"]');
+            await expect(page.locator('#charts-content')).toHaveClass(/active/);
 
             await page.click('[data-finance-tab="expenses"]');
             await expect(page.locator('#expenses-content')).toHaveClass(/active/);

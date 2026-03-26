@@ -310,27 +310,6 @@ describe('StorageManager', () => {
         });
     });
 
-    describe('charge management', () => {
-        it('should add a charge', () => {
-            const charge = storage.addCharge({ description: 'Rent', amount: 1200 });
-            expect(charge.id).toBeDefined();
-            expect(charge.description).toBe('Rent');
-        });
-
-        it('should update a charge', () => {
-            const charge = storage.addCharge({ description: 'Rent', amount: 1200 });
-            storage.updateCharge(charge.id, { amount: 1300 });
-            const updated = storage.getCharges().find(c => c.id === charge.id);
-            expect(updated?.amount).toBe(1300);
-        });
-
-        it('should delete a charge', () => {
-            const charge = storage.addCharge({ description: 'Rent', amount: 1200 });
-            storage.deleteCharge(charge.id);
-            expect(storage.getCharges().length).toBe(0);
-        });
-    });
-
     // ========================
     // Leveling & Streak
     // ========================
