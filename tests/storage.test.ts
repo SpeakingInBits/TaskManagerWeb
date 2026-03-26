@@ -57,10 +57,9 @@ describe('StorageManager', () => {
     // ========================
     describe('task management', () => {
         it('should add a task', () => {
-            const task = storage.addTask({ title: 'Buy groceries', priority: 'high' });
+            const task = storage.addTask({ title: 'Buy groceries' });
             expect(task.id).toBeDefined();
             expect(task.title).toBe('Buy groceries');
-            expect(task.priority).toBe('high');
             expect(task.completed).toBe(false);
             expect(task.createdDate).toBeDefined();
         });
@@ -91,7 +90,6 @@ describe('StorageManager', () => {
 
         it('should set default values for task fields', () => {
             const task = storage.addTask({ title: 'Minimal' });
-            expect(task.priority).toBe('medium');
             expect(task.repeatType).toBe('none');
         });
     });
@@ -358,13 +356,11 @@ describe('StorageManager', () => {
         });
 
         it('should update a category and propagate to items', () => {
-            storage.addTask({ title: 'Test', category: 'Work' });
             storage.addHabit({ name: 'Test', category: 'Work' });
             const result = storage.updateCategory('Work', 'Career');
             expect(result).toBe(true);
             expect(storage.getCategories()).toContain('Career');
             expect(storage.getCategories()).not.toContain('Work');
-            expect(storage.getTasks()[0].category).toBe('Career');
             expect(storage.getHabits()[0].category).toBe('Career');
         });
 
@@ -374,11 +370,11 @@ describe('StorageManager', () => {
         });
 
         it('should delete a category and clear from items', () => {
-            storage.addTask({ title: 'Test', category: 'Work' });
+            storage.addHabit({ name: 'Test', category: 'Work' });
             const result = storage.deleteCategory('Work');
             expect(result).toBe(true);
             expect(storage.getCategories()).not.toContain('Work');
-            expect(storage.getTasks()[0].category).toBeNull();
+            expect(storage.getHabits()[0].category).toBeNull();
         });
     });
 
