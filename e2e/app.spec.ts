@@ -76,7 +76,6 @@ test.describe('Task Manager App', () => {
             await page.click('#addTaskBtn');
             await page.fill('#taskTitle', 'Buy groceries');
             await page.fill('#taskDescription', 'Milk, eggs, bread');
-            await page.selectOption('#taskPriority', 'high');
             await page.click('#taskForm button[type="submit"]');
 
             await expect(page.locator('#taskModal')).not.toHaveClass(/active/);
