@@ -561,11 +561,35 @@
                 <div class="wishlist-container">
                     <div class="wishlist-header">
                         <h2>Wish List</h2>
-                        <button class="btn btn-primary" id="addWishItemBtn">+ Add Item</button>
+                        <div class="wishlist-header-actions">
+                            <button class="btn btn-secondary" id="addWishListBtn">+ Add List</button>
+                            <button class="btn btn-primary" id="addWishItemBtn">+ Add Item</button>
+                        </div>
                     </div>
 
-                    <div class="wish-list" id="wishList">
-                        <p class="empty-state">No items in your wish list. Add one to get started!</p>
+                    <div id="wishListContent">
+                        <p class="empty-state">No items in your wish list. Add a list or item to get started!</p>
+                    </div>
+                </div>
+
+                <!-- Wish List Modal (for creating/editing named lists) -->
+                <div class="modal" id="wishListModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="wishListModalTitle">Add List</h3>
+                            <button class="close-btn">&times;</button>
+                        </div>
+                        <form id="wishListForm">
+                            <div class="form-group">
+                                <label for="wishListName">List Name *</label>
+                                <input type="text" id="wishListName" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save</button>
+                                <button type="button" class="btn btn-danger" id="deleteWishListBtn" style="display: none;">Delete</button>
+                                <button type="button" class="btn btn-secondary" id="cancelWishListBtn">Cancel</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
@@ -580,6 +604,12 @@
                             <div class="form-group">
                                 <label for="wishItemTitle">Title *</label>
                                 <input type="text" id="wishItemTitle" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="wishItemList">List</label>
+                                <select id="wishItemList">
+                                    <option value="">Uncategorized</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label for="wishItemUrl">URL (optional)</label>
