@@ -61,6 +61,7 @@
             <button class="nav-tab" data-tab="projects">📁 Projects</button>
             <button class="nav-tab" data-tab="habits">⭐ Habits</button>
             <button class="nav-tab" data-tab="wishlist">🎁 Wish List</button>
+            <button class="nav-tab" data-tab="shopping">🛒 Shopping</button>
             <button class="nav-tab" data-tab="notes">📝 Notes</button>
             <button class="nav-tab" data-tab="finances">💰 Finances</button>
             <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
@@ -631,6 +632,48 @@
                                 <button type="submit" class="btn btn-primary">Save</button>
                                 <button type="button" class="btn btn-secondary" id="deleteNoteBtn" style="display: none;">Delete</button>
                                 <button type="button" class="btn btn-secondary" id="cancelNoteBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Shopping List Tab -->
+            <section class="tab-content" id="shopping-tab">
+                <div class="shopping-container">
+                    <div class="shopping-header">
+                        <h2>🛒 Shopping List</h2>
+                        <div class="shopping-header-actions">
+                            <button class="btn btn-secondary" id="clearCompletedShoppingBtn">Clear Checked</button>
+                            <button class="btn btn-primary" id="addShoppingItemBtn">+ Add Item</button>
+                        </div>
+                    </div>
+
+                    <div class="shopping-list" id="shoppingList">
+                        <p class="empty-state">No items in your shopping list. Add one to get started!</p>
+                    </div>
+                </div>
+
+                <!-- Shopping Item Modal -->
+                <div class="modal" id="shoppingItemModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="shoppingItemModalTitle">Add Shopping Item</h3>
+                            <button class="close-btn">&times;</button>
+                        </div>
+                        <form id="shoppingItemForm">
+                            <div class="form-group">
+                                <label for="shoppingItemName">Item Name *</label>
+                                <input type="text" id="shoppingItemName" required placeholder="e.g. Milk">
+                            </div>
+                            <div class="form-group">
+                                <label for="shoppingItemQuantity">Quantity (optional)</label>
+                                <input type="text" id="shoppingItemQuantity" placeholder="e.g. 2 litres">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save</button>
+                                <button type="button" class="btn btn-secondary" id="deleteShoppingItemBtn" style="display: none;">Delete</button>
+                                <button type="button" class="btn btn-secondary" id="cancelShoppingItemBtn">Cancel</button>
                             </div>
                         </form>
                     </div>
