@@ -1,4 +1,4 @@
-const CACHE_NAME = 'task-manager-vc6dcb6a';
+const CACHE_NAME = 'task-manager-v1decfa9';
 const urlsToCache = [
   '/',
   '/index.html',
