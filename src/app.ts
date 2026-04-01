@@ -1599,20 +1599,56 @@ class TaskManager {
 
         const totalRevenue = Object.values(revenueTotals).reduce((s, v) => s + v, 0);
         const totalExpenses = Object.values(expenseTotals).reduce((s, v) => s + v, 0);
+
+        // Sort revenue sources largest first
+        const revEntries = Object.entries(revenueTotals).sort((a, b) => b[1] - a[1]);
+        const expEntries = Object.entries(expenseTotals);
+        const expenseOrder = expEntries.map(([cat]) => cat);
+
+        // Sequential allocation: each revenue source fills expenses top-to-bottom in order
+        // Amounts below this threshold (half a cent) are treated as zero to avoid floating-point noise
+        const ALLOC_EPSILON = 0.005;
+        type FlowEntry = { revCat: string; expCat: string; amount: number };
+        const flows: FlowEntry[] = [];
+        const remainingExpenses: Record<string, number> = { ...expenseTotals };
+
+        for (const [revCat, revAmount] of revEntries) {
+            let remaining = revAmount;
+            for (const expCat of expenseOrder) {
+                if (remaining < ALLOC_EPSILON) break;
+                const need = remainingExpenses[expCat] ?? 0;
+                if (need < ALLOC_EPSILON) continue;
+                const allocated = Math.min(remaining, need);
+                flows.push({ revCat, expCat, amount: allocated });
+                remainingExpenses[expCat] -= allocated;
+                remaining -= allocated;
+            }
+            // Any remaining revenue after all expenses are covered goes to Leftover
+            if (remaining > ALLOC_EPSILON) {
+                flows.push({ revCat, expCat: 'Leftover', amount: remaining });
+            }
+        }
+
+        // Build right side: expenses in original order, then Leftover at the end if present
+        const leftoverTotal = totalRevenue > totalExpenses ? totalRevenue - totalExpenses : 0;
+        const rightEntries: [string, number][] = [
+            ...expEntries,
+            ...(leftoverTotal > ALLOC_EPSILON ? [['Leftover', leftoverTotal] as [string, number]] : [])
+        ];
+
         const totalFlow = Math.max(totalRevenue, totalExpenses, 0.01);
 
         const svgW = 560, svgH = 320;
         const nodeW = 14, lx = 20, rx = svgW - nodeW - 20;
         const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+        const leftoverColor = '#9ca3af';
         const incomeColor = '#10b981';
         const padding = 8;
 
-        const revEntries = Object.entries(revenueTotals);
-        const expEntries = Object.entries(expenseTotals);
+        const totalLeftH = svgH - padding * Math.max(0, revEntries.length - 1);
+        const totalRightH = svgH - padding * Math.max(0, rightEntries.length - 1);
 
-        const totalLeftH = svgH - padding * (revEntries.length - 1);
-        const totalRightH = svgH - padding * (expEntries.length - 1);
-
+        // Left nodes: revenue sorted largest first
         let leftY = 0;
         const leftNodes = revEntries.map(([cat, val]) => {
             const h = Math.max(4, (val / totalFlow) * totalLeftH);
@@ -1621,32 +1657,47 @@ class TaskManager {
             return node;
         });
 
+        // Right nodes: expenses in original order + optional Leftover
         let rightY = 0;
-        const rightNodes = expEntries.map(([cat, val], i) => {
+        const rightNodes = rightEntries.map(([cat, val], i) => {
+            const color = cat === 'Leftover' ? leftoverColor : colors[i % colors.length];
             const h = Math.max(4, (val / totalFlow) * totalRightH);
-            const node = { cat, val, y: rightY, h, color: colors[i % colors.length] };
+            const node = { cat, val, y: rightY, h, color };
             rightY += h + padding;
             return node;
         });
 
-        const leftPaths = leftNodes.map(ln => {
-            // Each income source distributes proportionally across all expense categories
-            let flowY = ln.y;
-            return rightNodes.map(rn => {
-                // Proportional share: income node's share of total * expense node's share of total
-                const flowFraction = (ln.val / totalFlow) * (rn.val / totalFlow) * totalFlow;
-                const flowH = Math.max(1, (flowFraction / totalFlow) * totalLeftH);
-                const x1 = lx + nodeW;
-                const y1top = flowY;
-                const y1bot = flowY + flowH;
-                const y2top = rn.y + (rn.h * (ln.y / (leftY || 1)));
-                const y2bot = y2top + flowH;
-                const mx = x1 + (rx - x1) * 0.5;
-                const topPath = `M${x1},${y1top} C${mx},${y1top} ${mx},${y2top} ${rx},${y2top}`;
-                const botPath = `L${rx},${y2bot} C${mx},${y2bot} ${mx},${y1bot} ${x1},${y1bot}`;
-                flowY += flowH;
-                return `<path d="${topPath} ${botPath} Z" fill="${rn.color}" fill-opacity="0.35" stroke="none"/>`;
-            }).join('');
+        // Node lookup maps
+        const leftNodeMap = new Map(leftNodes.map(n => [n.cat, n]));
+        const rightNodeMap = new Map(rightNodes.map(n => [n.cat, n]));
+
+        // Track the current Y offset within each node for stacking flow bands
+        const leftFlowY: Record<string, number> = {};
+        for (const n of leftNodes) leftFlowY[n.cat] = n.y;
+        const rightFlowY: Record<string, number> = {};
+        for (const n of rightNodes) rightFlowY[n.cat] = n.y;
+
+        // Render flow bands using amounts proportional to their respective node heights
+        const pathElems = flows.map(flow => {
+            const leftNode = leftNodeMap.get(flow.revCat)!;
+            const rightNode = rightNodeMap.get(flow.expCat)!;
+
+            const flowLeftH = Math.max(1, (flow.amount / leftNode.val) * leftNode.h);
+            const flowRightH = Math.max(1, (flow.amount / rightNode.val) * rightNode.h);
+
+            const x1 = lx + nodeW;
+            const y1top = leftFlowY[flow.revCat];
+            const y1bot = y1top + flowLeftH;
+            const y2top = rightFlowY[flow.expCat];
+            const y2bot = y2top + flowRightH;
+
+            leftFlowY[flow.revCat] += flowLeftH;
+            rightFlowY[flow.expCat] += flowRightH;
+
+            const mx = x1 + (rx - x1) * 0.5;
+            const topPath = `M${x1},${y1top} C${mx},${y1top} ${mx},${y2top} ${rx},${y2top}`;
+            const botPath = `L${rx},${y2bot} C${mx},${y2bot} ${mx},${y1bot} ${x1},${y1bot}`;
+            return `<path d="${topPath} ${botPath} Z" fill="${rightNode.color}" fill-opacity="0.35" stroke="none"/>`;
         }).join('');
 
         const leftRects = leftNodes.map(n =>
@@ -1661,7 +1712,7 @@ class TaskManager {
 
         container.innerHTML = `
             <svg viewBox="0 0 ${svgW} ${svgH}" class="sankey-svg">
-                ${leftPaths}
+                ${pathElems}
                 ${leftRects}
                 ${rightRects}
             </svg>`;
