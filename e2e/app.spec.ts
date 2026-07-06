@@ -21,11 +21,6 @@ test.describe('Task Manager App', () => {
             await expect(page.locator('#dashboard-tab')).toBeVisible();
         });
 
-        test('should display header stats', async ({ page }) => {
-            await expect(page.locator('#userLevel')).toHaveText('1');
-            await expect(page.locator('#dailyStreak')).toHaveText('0');
-        });
-
         test('should switch to tasks tab', async ({ page }) => {
             await page.click('[data-tab="tasks"]');
             await expect(page.locator('#tasks-tab')).toBeVisible();
@@ -35,11 +30,6 @@ test.describe('Task Manager App', () => {
         test('should switch to projects tab', async ({ page }) => {
             await page.click('[data-tab="projects"]');
             await expect(page.locator('#projects-tab')).toBeVisible();
-        });
-
-        test('should switch to habits tab', async ({ page }) => {
-            await page.click('[data-tab="habits"]');
-            await expect(page.locator('#habits-tab')).toBeVisible();
         });
 
         test('should switch to finances tab', async ({ page }) => {
@@ -153,41 +143,6 @@ test.describe('Task Manager App', () => {
     });
 
     // ========================
-    // Habit CRUD
-    // ========================
-    test.describe('habit management', () => {
-        test.beforeEach(async ({ page }) => {
-            await page.click('[data-tab="habits"]');
-        });
-
-        test('should show empty state initially', async ({ page }) => {
-            await expect(page.locator('#habitsList .empty-state')).toBeVisible();
-        });
-
-        test('should create a new habit', async ({ page }) => {
-            await page.click('#addHabitBtn');
-            await page.fill('#habitName', 'Exercise');
-            await page.fill('#habitDescription', '30 min workout');
-            await page.click('#habitForm button[type="submit"]');
-
-            await expect(page.locator('#habitModal')).not.toHaveClass(/active/);
-            await expect(page.locator('.habit-card')).toBeVisible();
-            await expect(page.locator('.habit-name')).toContainText('Exercise');
-        });
-
-        test('should complete a habit', async ({ page }) => {
-            // Create habit
-            await page.click('#addHabitBtn');
-            await page.fill('#habitName', 'Meditate');
-            await page.click('#habitForm button[type="submit"]');
-
-            // Complete it
-            await page.click('.habit-checkbox');
-            await expect(page.locator('.habit-checkbox')).toContainText('Done for Today');
-        });
-    });
-
-    // ========================
     // Finance CRUD
     // ========================
     test.describe('finance management', () => {
@@ -255,17 +210,17 @@ test.describe('Task Manager App', () => {
         });
 
         test('should reload active tab data when returning to today', async ({ page }) => {
-            // Switch to habits tab
-            await page.click('[data-tab="habits"]');
-            await expect(page.locator('#habits-tab')).toBeVisible();
+            // Switch to tasks tab
+            await page.click('[data-tab="tasks"]');
+            await expect(page.locator('#tasks-tab')).toBeVisible();
             // Navigate to previous day
             await page.click('#prevDayBtn');
             await expect(page.locator('#selectedDateDisplay')).not.toContainText('Today');
             // Return to today via button
             await page.click('#goTodayBtn');
-            // The habits tab should still be active and showing today's data
+            // The tasks tab should still be active and showing today's data
             await expect(page.locator('#selectedDateDisplay')).toContainText('Today');
-            await expect(page.locator('#habits-tab')).toBeVisible();
+            await expect(page.locator('#tasks-tab')).toBeVisible();
         });
     });
 
@@ -357,17 +312,6 @@ test.describe('Task Manager App', () => {
 
         test('should show data version', async ({ page }) => {
             await expect(page.locator('#dataVersion')).toHaveText('1.0.0');
-        });
-
-        test('should update tasks per level', async ({ page }) => {
-            page.on('dialog', dialog => dialog.accept());
-            await page.fill('#tasksPerLevel', '50');
-            await page.click('#saveTasksPerLevel');
-            // Verify it persisted
-            await page.click('[data-tab="dashboard"]');
-            await page.click('[data-tab="settings"]');
-            const value = await page.inputValue('#tasksPerLevel');
-            expect(value).toBe('50');
         });
     });
 

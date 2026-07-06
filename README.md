@@ -1,18 +1,16 @@
 # Task Manager Pro 📋
 
-A comprehensive Progressive Web App (PWA) for managing tasks, projects, habits, and finances with gamification features.
+A comprehensive Progressive Web App (PWA) for managing tasks, projects, and finances.
 
 ## 📖 Project Description
 
-Task Manager Pro is a powerful, all-in-one productivity application that combines task management, project organization, habit tracking, and personal finance management into a single, intuitive interface. Built as a Progressive Web App, it works seamlessly across all devices and can be installed on your phone or computer for offline access.
-
-The app features a gamification system with points, levels, and daily streaks to keep you motivated, along with a customizable rewards shop where you can redeem your earned points.
+Task Manager Pro is a powerful, all-in-one productivity application that combines task management, project organization, and personal finance management into a single, intuitive interface. Built as a Progressive Web App, it works seamlessly across all devices and can be installed on your phone or computer for offline access.
 
 ## ✨ Current Features
 
 ### 🎯 Task Management
 - Create, edit, and delete tasks with detailed information
-- Set due dates, priorities (low, medium, high), and point values
+- Set due dates and repeat schedules
 - Categorize tasks with custom categories
 - Filter and search tasks by category, status, or keywords
 - **Recurring Tasks** with multiple options:
@@ -31,15 +29,6 @@ The app features a gamification system with points, levels, and daily streaks to
 - Organize tasks within projects
 - Monitor active projects on dashboard
 
-### ⭐ Habit Tracking
-- Create daily habits with custom icons (emoji picker)
-- Set target completion goals per day
-- Track habit streaks
-- View habit history and completion patterns
-- Quick habit logging from dashboard
-- Filter habits by custom categories
-- Monitor incomplete habits for the day
-
 ### 💰 Finance Management
 - Track three types of financial records:
   - **Expenses**: Daily spending and costs
@@ -50,21 +39,8 @@ The app features a gamification system with points, levels, and daily streaks to
 - View financial summaries and totals
 - Add descriptions and amounts for each entry
 
-### 🎮 Gamification System
-- Earn points by completing tasks and habits
-- Level up based on accumulated points
-- Maintain daily streaks for consecutive days
-- Visual progress tracking in header
-
-### 🛒 Rewards Shop
-- Create custom rewards with point costs
-- Redeem rewards using earned points
-- Manage and edit available rewards
-- Track when rewards are purchased
-
 ### 🏠 Dashboard
-- Today's overview with task and habit summaries
-- Quick access to incomplete habits
+- Today's overview with task summaries
 - Recent activity feed
 - Active projects summary
 - Real-time statistics display
@@ -206,17 +182,12 @@ npm run test:e2e:ui        # Run E2E tests with the Playwright UI
    - Click "+ Add Task"
    - Fill in the details and save
 
-3. **Set Up Daily Habits**
-   - Navigate to the Habits tab
-   - Create habits you want to track daily
-   - Complete them to earn points and build streaks
-
-4. **Track Your Finances**
+3. **Track Your Finances**
    - Use the Finances tab to log expenses and revenue
    - Set up recurring charges for bills
    - Filter by date range to see spending patterns
 
-5. **Organize with Projects**
+4. **Organize with Projects**
    - Create projects to group related tasks
    - Assign tasks to projects for better organization
    - Monitor progress from the dashboard

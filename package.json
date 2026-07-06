@@ -1,7 +1,7 @@
 {
   "name": "taskmanagerweb",
   "version": "1.0.0",
-  "description": "A comprehensive Progressive Web App (PWA) for managing tasks, projects, habits, and finances with gamification features.",
+  "description": "A comprehensive Progressive Web App (PWA) for managing tasks, projects, and finances.",
   "main": "service-worker.js",
   "scripts": {
     "build": "tsc",
