@@ -2,7 +2,7 @@
 // Main Application Logic
 // ========================
 
-import { StorageManager, storage, STORAGE_VERSION, Task, Habit, FinanceItem, WishItem, WishList, Note, ShoppingItem, getDaysUntilDueText } from './storage.js';
+import { StorageManager, storage, STORAGE_VERSION, Task, FinanceItem, WishItem, WishList, Note, ShoppingItem, getDaysUntilDueText } from './storage.js';
 
 const FILTER_SETTINGS_KEY = 'taskManagerFilterSettings';
 
@@ -20,7 +20,6 @@ interface FilteredFinanceItem extends FinanceItem {
 class TaskManager {
     currentEditingTaskId: string | null = null;
     currentEditingProjectId: string | null = null;
-    currentEditingHabitId: string | null = null;
     currentEditingFinanceId: string | null = null;
     currentEditingFinanceType: string | null = null;
     currentEditingWishItemId: string | null = null;
@@ -32,28 +31,6 @@ class TaskManager {
     selectedDate: Date = new Date();
     tasksExpanded: boolean = false;
     hideCompleted: boolean = false;
-    emojis: string[] = [
-        // Activity
-        '💪', '🏃', '🚴', '🏊', '🧘', '💃', '🕺', '⛹️',
-        // Food & Health
-        '🥗', '🍎', '🥕', '💊', '🏥', '🧄', '🥤', '☕',
-        // Work & Productivity
-        '📚', '✍️', '💼', '🎯', '📊', '💻', '📱', '⌨️',
-        // Learning & Mind
-        '🧠', '📖', '🎓', '💡', '🔬', '🎨', '🎵', '🎭',
-        // Nature & Outdoors
-        '🌿', '🌳', '🌞', '🌙', '🌊', '⛰️', '🏞️', '🦋',
-        // Sleep & Rest
-        '😴', '🛏️', '😌', '🕯️', '🌙', '💤', '🧖', '🛀',
-        // Social & Fun
-        '👨‍👩‍👧‍👦', '🤝', '🎉', '😊', '❤️', '🤗', '😂', '👏',
-        // Sports & Games
-        '⚽', '🏀', '🎾', '🏐', '🎯', '♟️', '🎲', '🃏',
-        // Habits & Goals
-        '⭐', '🎯', '🏆', '🥇', '🔥', '💎', '✨', '🌟',
-        // More Emojis
-        '🚀', '🌈', '🎁', '📅', '⏰', '💰', '🎪', '🎢'
-    ];
 
     constructor() {
         this.init();
@@ -96,17 +73,6 @@ class TaskManager {
         document.getElementById('deleteProjectBtn')!.addEventListener('click', () => this.deleteProject());
         document.getElementById('closeProjectDetailBtn')!.addEventListener('click', () => this.closeProjectDetailModal());
         document.getElementById('editProjectFromDetailBtn')!.addEventListener('click', () => this.editProjectFromDetail());
-
-        // Habits section
-        document.getElementById('addHabitBtn')!.addEventListener('click', () => this.openHabitModal());
-        document.getElementById('habitForm')!.addEventListener('submit', (e) => this.saveHabit(e));
-        document.getElementById('cancelHabitBtn')!.addEventListener('click', () => this.closeHabitModal());
-        document.getElementById('deleteHabitBtn')!.addEventListener('click', () => this.deleteHabit());
-        document.getElementById('habitEmojiBtn')!.addEventListener('click', () => this.openEmojiPicker());
-        document.getElementById('closeEmojiBtn')!.addEventListener('click', () => this.closeEmojiPicker());
-        document.getElementById('habitCategory')!.addEventListener('change', (e) => this.handleCategoryChange('habit', (e.target as HTMLSelectElement).value));
-        document.getElementById('habitCategorySave')!.addEventListener('click', () => this.handleAddCategory('habit'));
-        document.getElementById('habitCategoryCancel')!.addEventListener('click', () => this.cancelAddCategory('habit'));
 
         // Finances section
         document.getElementById('addExpenseBtn')!.addEventListener('click', () => this.openFinanceModal('expense'));
@@ -159,7 +125,6 @@ class TaskManager {
         });
 
         // Settings
-        document.getElementById('saveTasksPerLevel')!.addEventListener('click', () => this.saveTasksPerLevel());
         document.getElementById('exportBtn')!.addEventListener('click', () => this.exportData());
         document.getElementById('importBtn')!.addEventListener('click', () => document.getElementById('importFile')!.click());
         document.getElementById('importFile')!.addEventListener('change', (e) => this.importData(e));
@@ -259,8 +224,6 @@ class TaskManager {
             this.renderTasks();
         } else if (tabName === 'projects') {
             this.renderProjects();
-        } else if (tabName === 'habits') {
-            this.renderHabits();
         } else if (tabName === 'finances') {
             this.renderFinances();
         } else if (tabName === 'wishlist') {
@@ -293,69 +256,15 @@ class TaskManager {
     renderDashboard(): void {
         const today = this.getSelectedDateStr();
         const tasks = storage.getTasks();
-        const habits = storage.getHabits();
-        const userStats = storage.getUserStats();
-
-        // Update header stats
-        document.getElementById('userLevel')!.textContent = String(userStats.level);
-        document.getElementById('dailyStreak')!.textContent = String(userStats.dailyStreak);
-
-        // Update level progress
-        const settings = storage.getSettings();
-        const completedTasksCount = tasks.filter(t => t.completed).length;
-        const tasksInCurrentLevel = completedTasksCount % settings.tasksPerLevel;
-        const tasksNeeded = settings.tasksPerLevel;
-        document.getElementById('levelProgress')!.textContent = `${tasksInCurrentLevel}/${tasksNeeded} tasks`;
 
         // Selected day's overview
         const todayTasks = tasks.filter(t => t.dueDate === today && !t.completed);
         const overdueTasks = tasks.filter(t => !t.completed && !!t.dueDate && t.dueDate < today);
         const completedToday = tasks.filter(t => t.completedDate === today);
-        const todayDay = this.selectedDate.getDay();
-
-        // Find incomplete habits for selected day
-        const incompleteHabits = habits.filter(habit => {
-            const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(todayDay);
-            if (!isValidDay) return false;
-            const todaysCompletions = storage.countHabitCompletionsForDate(habit.id, today);
-            const targetGoal = habit.targetGoal || 1;
-            return todaysCompletions < targetGoal;
-        });
 
         document.getElementById('todayTasksCount')!.textContent = String(todayTasks.length);
         document.getElementById('overdueTasksCount')!.textContent = String(overdueTasks.length);
         document.getElementById('completedTodayCount')!.textContent = String(completedToday.length);
-        document.getElementById('incompleteHabitsCount')!.textContent = String(incompleteHabits.length);
-
-        // Render incomplete habits list
-        const incompleteHabitsList = document.getElementById('incompleteHabitsList')!;
-        if (incompleteHabits.length === 0) {
-            incompleteHabitsList.innerHTML = '<p class="empty-state" style="margin: 0.5rem 0;">All habits completed for today! 🎉</p>';
-        } else {
-            incompleteHabitsList.innerHTML = incompleteHabits.map(habit => {
-                const todaysCompletions = storage.countHabitCompletionsForDate(habit.id, today);
-                const targetGoal = habit.targetGoal || 1;
-                const percentage = Math.min(100, Math.round((todaysCompletions / targetGoal) * 100));
-                return `
-                    <div class="habit-item" style="padding: 0.5rem; border-left: 3px solid #4CAF50; margin-bottom: 0.5rem; background: #f9f9f9; cursor: pointer;" data-habit-id="${habit.id}">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <span style="font-size: 1.2rem; margin-right: 0.5rem;">${habit.icon}</span>
-                                <span style="font-weight: 500;">${habit.name}</span>
-                            </div>
-                            <span style="font-size: 0.85rem; color: #666;">${todaysCompletions}/${targetGoal} (${percentage}%)</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            // Add click handlers to navigate to habits
-            document.querySelectorAll('.habit-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    this.switchTab('habits');
-                });
-            });
-        }
 
         // Recent activity
         this.renderRecentActivity();
@@ -377,21 +286,6 @@ class TaskManager {
                 icon: '✓'
             });
         });
-
-        // Collect activities from habits
-        if (data.dailyHabitLogs) {
-            data.dailyHabitLogs.slice(-10).forEach(log => {
-                const habit = data.habits.find(h => h.id === log.habitId);
-                if (habit) {
-                    activities.push({
-                        type: 'habit',
-                        message: `Completed habit: ${habit.name}`,
-                        date: log.date,
-                        icon: '⭐'
-                    });
-                }
-            });
-        }
 
         // Sort by date
         activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -784,17 +678,14 @@ class TaskManager {
             task.completed = !task.completed;
             if (task.completed) {
                 task.completedDate = this.getSelectedDateStr();
-                storage.updateDailyStreak(true);
                 // If repeatable, immediately create next task with recalculated due date
                 if (task.repeatType !== 'none') {
                     this.createNextRecurringTask(task);
                 }
             } else {
-                // If uncompleting, also recalculate level
                 task.completedDate = null;
             }
             storage.updateTask(taskId, task);
-            storage.updateLevel();
             this.renderTasks();
             this.renderDashboard();
             this.renderProjects();
@@ -1061,216 +952,6 @@ class TaskManager {
                 }
             });
         });
-    }
-
-    // ========================
-    // Habits Management
-    // ========================
-    renderHabits(): void {
-        const habits = storage.getHabits();
-        const container = document.getElementById('habitsList')!;
-
-        if (habits.length === 0) {
-            container.innerHTML = '<p class="empty-state">No habits yet. Create daily habits to build streaks!</p>';
-            return;
-        }
-
-        container.innerHTML = habits.map(habit => this.renderHabitCard(habit)).join('');
-
-        document.querySelectorAll('.habit-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                if (!(e.target as HTMLElement).classList.contains('habit-checkbox')) {
-                    this.openHabitModal((card as HTMLElement).dataset.habitId!);
-                }
-            });
-        });
-
-        document.querySelectorAll('.habit-checkbox').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const habitId = (e.target as HTMLElement).dataset.habitId!;
-                this.completeHabit(habitId);
-            });
-        });
-    }
-
-    renderHabitCard(habit: Habit): string {
-        const selectedDayOfWeek = this.selectedDate.getDay();
-        const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(selectedDayOfWeek);
-        const selectedDateStr = this.getSelectedDateStr();
-        const isPastDay = !this.isSelectedDateToday();
-
-        const todaysCompletions = storage.countHabitCompletionsForDate(habit.id, selectedDateStr);
-        const targetGoal = habit.targetGoal || 1;
-        const percentage = Math.min(100, Math.round((todaysCompletions / targetGoal) * 100));
-        const isComplete = todaysCompletions >= targetGoal;
-
-        const btnLabel = !isValidDay
-            ? '✗ Not Scheduled'
-            : isComplete
-                ? (isPastDay ? '✓ Logged' : '✓ Done for Today')
-                : (isPastDay ? '+ Log Past Day' : '+ Complete');
-
-        return `
-            <div class="habit-card" data-habit-id="${habit.id}">
-                <div class="habit-icon">${habit.icon}</div>
-                <div class="habit-name">${habit.name}</div>
-                ${habit.description ? `<div class="habit-description">${habit.description}</div>` : ''}
-                <div class="habit-stats">
-                    <div class="habit-stat">
-                        <span class="habit-stat-label">Streak</span>
-                        <span class="habit-stat-value">${habit.streak || 0}</span>
-                    </div>
-                    <div class="habit-stat">
-                        <span class="habit-stat-label">Progress</span>
-                        <span class="habit-stat-value">${todaysCompletions}/${targetGoal}</span>
-                    </div>
-                </div>
-                <div style="margin-top: 0.5rem;">
-                    <div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
-                        <div style="background: ${isComplete ? '#4CAF50' : '#2196F3'}; height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
-                    </div>
-                    <div style="text-align: center; font-size: 0.9rem; color: ${isComplete ? '#4CAF50' : '#666'}; margin-bottom: 0.5rem;">
-                        ${isComplete ? '✓ Complete!' : `${percentage}% Complete`}
-                    </div>
-                </div>
-                <button class="habit-checkbox ${!isValidDay || isComplete ? 'disabled' : ''}" data-habit-id="${habit.id}" ${!isValidDay || isComplete ? 'disabled' : ''}>
-                    ${btnLabel}
-                </button>
-            </div>
-        `;
-    }
-
-    openHabitModal(habitId: string | null = null): void {
-        this.currentEditingHabitId = habitId;
-        const modal = document.getElementById('habitModal')!;
-        const form = document.getElementById('habitForm') as HTMLFormElement;
-        const deleteBtn = document.getElementById('deleteHabitBtn') as HTMLElement;
-
-        form.reset();
-        deleteBtn.style.display = 'none';
-        (document.getElementById('habitIcon') as HTMLInputElement).value = '⭐';
-        document.getElementById('habitIconDisplay')!.textContent = '⭐';
-
-        document.querySelectorAll<HTMLInputElement>('input[name="habitDay"]').forEach(checkbox => {
-            checkbox.checked = false;
-        });
-
-        if (habitId) {
-            const habit = storage.getHabits().find(h => h.id === habitId);
-            if (habit) {
-                (document.getElementById('habitName') as HTMLInputElement).value = habit.name;
-                (document.getElementById('habitDescription') as HTMLTextAreaElement).value = habit.description || '';
-                (document.getElementById('habitIcon') as HTMLInputElement).value = habit.icon || '⭐';
-                document.getElementById('habitIconDisplay')!.textContent = habit.icon || '⭐';
-                (document.getElementById('habitCategory') as HTMLSelectElement).value = habit.category || '';
-                (document.getElementById('habitTargetGoal') as HTMLInputElement).value = String(habit.targetGoal || 1);
-                deleteBtn.style.display = 'block';
-
-                if (habit.daysOfWeek && Array.isArray(habit.daysOfWeek)) {
-                    habit.daysOfWeek.forEach(day => {
-                        const checkbox = document.querySelector<HTMLInputElement>(`input[name="habitDay"][value="${day}"]`);
-                        if (checkbox) {
-                            checkbox.checked = true;
-                        }
-                    });
-                } else {
-                    document.querySelectorAll<HTMLInputElement>('input[name="habitDay"]').forEach(checkbox => {
-                        checkbox.checked = true;
-                    });
-                }
-            }
-        } else {
-            document.querySelectorAll<HTMLInputElement>('input[name="habitDay"]').forEach(checkbox => {
-                checkbox.checked = true;
-            });
-        }
-
-        this.loadCategoryDropdown('habit');
-        modal.classList.add('active');
-    }
-
-    closeHabitModal(): void {
-        document.getElementById('habitModal')!.classList.remove('active');
-        this.currentEditingHabitId = null;
-    }
-
-    saveHabit(e: Event): void {
-        e.preventDefault();
-
-        const selectedDays = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="habitDay"]:checked'))
-            .map(checkbox => parseInt(checkbox.value));
-
-        const habit: Partial<Habit> = {
-            name: (document.getElementById('habitName') as HTMLInputElement).value,
-            description: (document.getElementById('habitDescription') as HTMLTextAreaElement).value,
-            icon: (document.getElementById('habitIcon') as HTMLInputElement).value,
-            category: (document.getElementById('habitCategory') as HTMLSelectElement).value || null,
-            targetGoal: parseInt((document.getElementById('habitTargetGoal') as HTMLInputElement).value) || 1,
-            daysOfWeek: selectedDays.length > 0 ? selectedDays : [0, 1, 2, 3, 4, 5, 6]
-        };
-
-        if (this.currentEditingHabitId) {
-            storage.updateHabit(this.currentEditingHabitId, habit);
-        } else {
-            storage.addHabit(habit);
-        }
-
-        this.closeHabitModal();
-        this.renderHabits();
-    }
-
-    deleteHabit(): void {
-        if (this.currentEditingHabitId) {
-            if (confirm('Are you sure you want to delete this habit?')) {
-                storage.deleteHabit(this.currentEditingHabitId);
-                this.closeHabitModal();
-                this.renderHabits();
-            }
-        }
-    }
-
-    completeHabit(habitId: string): void {
-        const habit = storage.getHabits().find(h => h.id === habitId);
-        if (habit) {
-            const selectedDayOfWeek = this.selectedDate.getDay();
-            const isValidDay = !habit.daysOfWeek || habit.daysOfWeek.includes(selectedDayOfWeek);
-
-            if (isValidDay) {
-                storage.logHabitCompletion(habitId, this.selectedDate);
-                storage.updateDailyStreak(true);
-                this.renderHabits();
-                this.renderDashboard();
-            }
-        }
-    }
-
-    openEmojiPicker(): void {
-        const modal = document.getElementById('emojiModal')!;
-        const emojiGrid = document.getElementById('emojiGrid')!;
-
-        emojiGrid.innerHTML = this.emojis.map(emoji =>
-            `<button type="button" class="emoji-btn" data-emoji="${emoji}">${emoji}</button>`
-        ).join('');
-
-        document.querySelectorAll('.emoji-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.selectEmoji((e.target as HTMLElement).dataset.emoji!);
-            });
-        });
-
-        modal.classList.add('active');
-    }
-
-    closeEmojiPicker(): void {
-        document.getElementById('emojiModal')!.classList.remove('active');
-    }
-
-    selectEmoji(emoji: string): void {
-        (document.getElementById('habitIcon') as HTMLInputElement).value = emoji;
-        document.getElementById('habitIconDisplay')!.textContent = emoji;
-        this.closeEmojiPicker();
     }
 
     // ========================
@@ -2431,48 +2112,7 @@ class TaskManager {
     // Settings
     // ========================
     renderSettings(): void {
-        this.loadSettings();
-        this.updateSettingsStatus();
         this.renderCategoryManagement();
-    }
-
-    loadSettings(): void {
-        const settings = storage.getSettings();
-        const tasksPerLevelInput = document.getElementById('tasksPerLevel') as HTMLInputElement | null;
-        if (tasksPerLevelInput) {
-            tasksPerLevelInput.value = String(settings.tasksPerLevel || 30);
-        }
-    }
-
-    updateSettingsStatus(): void {
-        const settings = storage.getSettings();
-        const tasks = storage.getTasks();
-        const completedTasksCount = tasks.filter(t => t.completed).length;
-        const userStats = storage.getUserStats();
-        const tasksInCurrentLevel = completedTasksCount % settings.tasksPerLevel;
-        const tasksToNext = settings.tasksPerLevel - tasksInCurrentLevel;
-
-        const currentLevelEl = document.getElementById('settingsCurrentLevel');
-        const totalCompletedEl = document.getElementById('settingsTotalCompleted');
-        const tasksToNextEl = document.getElementById('settingsTasksToNext');
-
-        if (currentLevelEl) currentLevelEl.textContent = String(userStats.level);
-        if (totalCompletedEl) totalCompletedEl.textContent = String(completedTasksCount);
-        if (tasksToNextEl) tasksToNextEl.textContent = String(tasksToNext);
-    }
-
-    saveTasksPerLevel(): void {
-        const tasksPerLevel = parseInt((document.getElementById('tasksPerLevel') as HTMLInputElement).value);
-
-        if (isNaN(tasksPerLevel) || tasksPerLevel < 1) {
-            alert('Please enter a valid number (minimum 1)');
-            return;
-        }
-
-        storage.updateSettings({ tasksPerLevel });
-        alert('Settings saved! Level has been recalculated.');
-        this.updateSettingsStatus();
-        this.renderDashboard();
     }
 
     exportData(): void {

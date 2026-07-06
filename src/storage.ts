@@ -34,26 +34,6 @@ export interface Project {
     createdDate: string;
 }
 
-export interface Habit {
-    id: string;
-    name: string;
-    description?: string;
-    icon: string;
-    category?: string | null;
-    targetGoal: number;
-    daysOfWeek?: number[];
-    streak: number;
-    lastCompletedDate?: string | null;
-    createdDate: string;
-}
-
-export interface HabitLog {
-    id: string;
-    habitId: string;
-    date: string;
-    timestamp: string;
-}
-
 export interface FinanceItem {
     id: string;
     description: string;
@@ -98,35 +78,16 @@ export interface ShoppingItem {
     createdDate: string;
 }
 
-export interface UserStats {
-    level: number;
-    dailyStreak: number;
-    lastActivityDate: string | null;
-}
-
-interface LegacyUserStats extends UserStats {
-    totalPoints?: number;
-    pointsBreakdown?: Record<string, number>;
-}
-
-export interface Settings {
-    tasksPerLevel: number;
-}
-
 export interface AppData {
     version: string;
     schemaVersion: number;
     lastUpdated: string;
     tasks: Task[];
     projects: Project[];
-    habits: Habit[];
-    dailyHabitLogs: HabitLog[];
     expenses: FinanceItem[];
     revenue: FinanceItem[];
     charges: FinanceItem[];
     categories: string[];
-    userStats: UserStats;
-    settings: Settings;
     wishList: WishItem[];
     wishLists: WishList[];
     notes: Note[];
@@ -169,20 +130,10 @@ export class StorageManager {
             lastUpdated: new Date().toISOString(),
             tasks: [],
             projects: [],
-            habits: [],
-            dailyHabitLogs: [],
             expenses: [],
             revenue: [],
             charges: [],
             categories: ['Work', 'Personal', 'Home', 'Shopping', 'Health', 'Fitness', 'Learning', 'Productivity', 'Food', 'Transportation', 'Entertainment', 'Utilities', 'Income'],
-            userStats: {
-                level: 1,
-                dailyStreak: 0,
-                lastActivityDate: null
-            },
-            settings: {
-                tasksPerLevel: 30
-            },
             wishList: [],
             wishLists: [],
             notes: [],
@@ -284,121 +235,6 @@ export class StorageManager {
     getProjects(): Project[] {
         const data = this.getData();
         return data.projects || [];
-    }
-
-    // Habit Management
-    addHabit(habit: Partial<Habit>): Habit {
-        const data = this.getData();
-        const newHabit: Habit = {
-            ...habit,
-            id: this.generateId(),
-            createdDate: new Date().toISOString(),
-            streak: 0,
-            lastCompletedDate: null,
-            targetGoal: habit.targetGoal || 1,
-            name: habit.name || '',
-            icon: habit.icon || '⭐',
-        } as Habit;
-        data.habits.push(newHabit);
-        this.saveData(data);
-        return newHabit;
-    }
-
-    updateHabit(habitId: string, updates: Partial<Habit>): Habit | undefined {
-        const data = this.getData();
-        const habit = data.habits.find(h => h.id === habitId);
-        if (habit) {
-            Object.assign(habit, updates);
-            if (!habit.targetGoal) habit.targetGoal = 1;
-            this.saveData(data);
-        }
-        return habit;
-    }
-
-    deleteHabit(habitId: string): void {
-        const data = this.getData();
-        data.habits = data.habits.filter(h => h.id !== habitId);
-        this.saveData(data);
-    }
-
-    getHabits(): Habit[] {
-        const data = this.getData();
-        return data.habits || [];
-    }
-
-    logHabitCompletion(habitId: string, date: Date = new Date()): void {
-        const data = this.getData();
-        const dateStr = this.formatDate(date);
-
-        data.dailyHabitLogs.push({
-            id: this.generateId(),
-            habitId,
-            date: dateStr,
-            timestamp: new Date().toISOString()
-        });
-
-        // Update habit streak based on fully-completed consecutive days
-        const habit = data.habits.find(h => h.id === habitId);
-        if (habit) {
-            habit.lastCompletedDate = dateStr;
-            habit.streak = this.calculateHabitStreak(habitId, habit.targetGoal, data.dailyHabitLogs);
-        }
-
-        this.saveData(data);
-    }
-
-    calculateHabitStreak(habitId: string, targetGoal: number, logs: HabitLog[]): number {
-        // Count completions per date for this habit
-        const habitLogs = logs.filter(l => l.habitId === habitId);
-        const countsByDate: Record<string, number> = {};
-        for (const log of habitLogs) {
-            countsByDate[log.date] = (countsByDate[log.date] || 0) + 1;
-        }
-
-        // Get dates where fully completed (>= targetGoal), sorted most recent first
-        const completedDates = Object.keys(countsByDate)
-            .filter(date => countsByDate[date] >= targetGoal)
-            .sort()
-            .reverse();
-
-        if (completedDates.length === 0) return 0;
-
-        // Count consecutive days going backward from the most recent fully-completed day
-        let streak = 1;
-        let currentDate = completedDates[0];
-
-        for (let i = 1; i < completedDates.length; i++) {
-            const [year, month, day] = currentDate.split('-').map(Number);
-            const prevDay = new Date(year, month - 1, day);
-            prevDay.setDate(prevDay.getDate() - 1);
-            const expectedDate = this.formatDate(prevDay);
-
-            if (completedDates[i] === expectedDate) {
-                streak++;
-                currentDate = completedDates[i];
-            } else {
-                break;
-            }
-        }
-
-        return streak;
-    }
-
-    isHabitCompletedToday(habitId: string): boolean {
-        const data = this.getData();
-        const todayStr = this.formatDate(new Date());
-        return data.dailyHabitLogs.some(log => log.habitId === habitId && log.date === todayStr);
-    }
-
-    countHabitCompletionsToday(habitId: string): number {
-        const data = this.getData();
-        const todayStr = this.formatDate(new Date());
-        return data.dailyHabitLogs.filter(log => log.habitId === habitId && log.date === todayStr).length;
-    }
-
-    countHabitCompletionsForDate(habitId: string, dateStr: string): number {
-        const data = this.getData();
-        return data.dailyHabitLogs.filter(log => log.habitId === habitId && log.date === dateStr).length;
     }
 
     // Finance Management
@@ -717,39 +553,6 @@ export class StorageManager {
         this.saveData(data);
     }
 
-    updateLevel(): void {
-        const data = this.getData();
-        const settings = this.getSettings();
-        const completedTasksCount = data.tasks.filter(t => t.completed).length;
-        data.userStats.level = Math.floor(completedTasksCount / settings.tasksPerLevel) + 1;
-        this.saveData(data);
-    }
-
-    updateDailyStreak(increment: boolean = true): void {
-        const data = this.getData();
-        const today = this.formatDate(new Date());
-
-        if (increment) {
-            if (data.userStats.lastActivityDate !== today) {
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                if (data.userStats.lastActivityDate !== this.formatDate(yesterday)) {
-                    data.userStats.dailyStreak = 1;
-                } else {
-                    data.userStats.dailyStreak += 1;
-                }
-            }
-        }
-
-        data.userStats.lastActivityDate = today;
-        this.saveData(data);
-    }
-
-    getUserStats(): UserStats {
-        const data = this.getData();
-        return data.userStats;
-    }
-
     // Utility Methods
     generateId(): string {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -795,8 +598,7 @@ export class StorageManager {
 
             const isValid = issues.length === 0;
             const hasPartialData = !isValid && typeof data === 'object' && data !== null &&
-                (data.tasks !== undefined || data.projects !== undefined || data.version !== undefined ||
-                 data.habits !== undefined || data.userStats !== undefined || data.settings !== undefined);
+                (data.tasks !== undefined || data.projects !== undefined || data.version !== undefined);
 
             return { isValid, hasPartialData, issues, parsed: data };
         } catch (e) {
@@ -813,7 +615,6 @@ export class StorageManager {
             const catObj = data.categories as unknown as Record<string, string[]>;
             categories = [...new Set([
                 ...(catObj['tasks'] || []),
-                ...(catObj['habits'] || []),
                 ...(catObj['finance'] || [])
             ])];
         } else if (Array.isArray(data.categories) && data.categories.length > 0) {
@@ -829,18 +630,10 @@ export class StorageManager {
             lastUpdated: now,
             tasks: Array.isArray(data.tasks) ? data.tasks : [],
             projects: Array.isArray(data.projects) ? data.projects : [],
-            habits: Array.isArray(data.habits) ? data.habits : [],
-            dailyHabitLogs: Array.isArray(data.dailyHabitLogs) ? data.dailyHabitLogs : [],
             expenses: Array.isArray(data.expenses) ? data.expenses : [],
             revenue: Array.isArray(data.revenue) ? data.revenue : [],
             charges: Array.isArray(data.charges) ? data.charges : [],
             categories,
-            userStats: {
-                level: (data.userStats as LegacyUserStats)?.level ?? 1,
-                dailyStreak: (data.userStats as LegacyUserStats)?.dailyStreak ?? 0,
-                lastActivityDate: (data.userStats as LegacyUserStats)?.lastActivityDate ?? null,
-            },
-            settings: data.settings || { tasksPerLevel: 30 },
             wishList: Array.isArray(data.wishList) ? data.wishList : [],
             wishLists: Array.isArray(data.wishLists) ? data.wishLists : [],
             notes: Array.isArray(data.notes) ? data.notes : [],
@@ -890,7 +683,6 @@ export class StorageManager {
             const catObj = data.categories as unknown as Record<string, string[]>;
             const merged = [...new Set([
                 ...(catObj['tasks'] || []),
-                ...(catObj['habits'] || []),
                 ...(catObj['finance'] || [])
             ])];
             data.categories = merged;
@@ -925,7 +717,6 @@ export class StorageManager {
         data.categories[idx] = trimmedNew;
 
         // Propagate rename to all item types
-        data.habits = data.habits.map(h => h.category === oldName ? { ...h, category: trimmedNew } : h);
         data.expenses = data.expenses.map(e => e.category === oldName ? { ...e, category: trimmedNew } : e);
         data.revenue = data.revenue.map(r => r.category === oldName ? { ...r, category: trimmedNew } : r);
         if (data.charges) {
@@ -946,7 +737,6 @@ export class StorageManager {
         data.categories.splice(idx, 1);
 
         // Clear category from all item types
-        data.habits = data.habits.map(h => h.category === categoryName ? { ...h, category: null } : h);
         data.expenses = data.expenses.map(e => e.category === categoryName ? { ...e, category: null } : e);
         data.revenue = data.revenue.map(r => r.category === categoryName ? { ...r, category: null } : r);
         if (data.charges) {
@@ -957,31 +747,6 @@ export class StorageManager {
         return true;
     }
 
-    // ========================
-    // Settings Management
-    // ========================
-    getSettings(): Settings {
-        const data = this.getData();
-        // Ensure settings exist with defaults
-        if (!data.settings) {
-            data.settings = {
-                tasksPerLevel: 30
-            };
-            this.saveData(data);
-        }
-        return data.settings;
-    }
-
-    updateSettings(settings: Partial<Settings>): void {
-        const data = this.getData();
-        if (!data.settings) {
-            data.settings = { tasksPerLevel: 30 };
-        }
-        Object.assign(data.settings, settings);
-        // Recalculate level with new settings
-        this.updateLevel();
-        this.saveData(data);
-    }
 }
 
 // Initialize global storage manager

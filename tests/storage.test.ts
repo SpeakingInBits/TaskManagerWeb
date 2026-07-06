@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StorageManager, getDaysUntilDueText } from '../src/storage';
-import type { Task, Habit, FinanceItem } from '../src/storage';
+import type { Task, FinanceItem } from '../src/storage';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -40,9 +40,7 @@ describe('StorageManager', () => {
             expect(data.version).toBe('1.0.0');
             expect(data.tasks).toEqual([]);
             expect(data.projects).toEqual([]);
-            expect(data.habits).toEqual([]);
             expect(data.categories).toContain('Work');
-            expect(data.userStats.level).toBe(1);
         });
 
         it('should not overwrite existing data', () => {
@@ -128,135 +126,6 @@ describe('StorageManager', () => {
     });
 
     // ========================
-    // Habit Management
-    // ========================
-    describe('habit management', () => {
-        it('should add a habit', () => {
-            const habit = storage.addHabit({ name: 'Exercise', icon: '💪' });
-            expect(habit.id).toBeDefined();
-            expect(habit.name).toBe('Exercise');
-            expect(habit.streak).toBe(0);
-            expect(habit.targetGoal).toBe(1);
-        });
-
-        it('should get all habits', () => {
-            storage.addHabit({ name: 'Read' });
-            storage.addHabit({ name: 'Meditate' });
-            expect(storage.getHabits().length).toBe(2);
-        });
-
-        it('should update a habit', () => {
-            const habit = storage.addHabit({ name: 'Read' });
-            storage.updateHabit(habit.id, { name: 'Read Books', targetGoal: 3 });
-            const updated = storage.getHabits().find(h => h.id === habit.id);
-            expect(updated?.name).toBe('Read Books');
-            expect(updated?.targetGoal).toBe(3);
-        });
-
-        it('should delete a habit', () => {
-            const habit = storage.addHabit({ name: 'To Delete' });
-            storage.deleteHabit(habit.id);
-            expect(storage.getHabits().length).toBe(0);
-        });
-
-        it('should log habit completion and set streak to 1 when targetGoal met', () => {
-            const habit = storage.addHabit({ name: 'Exercise' });
-            storage.logHabitCompletion(habit.id, new Date());
-            const updated = storage.getHabits().find(h => h.id === habit.id);
-            expect(updated?.streak).toBe(1);
-        });
-
-        it('should not increment streak when targetGoal is not yet met', () => {
-            const habit = storage.addHabit({ name: 'Drink Water', targetGoal: 10 });
-            storage.logHabitCompletion(habit.id, new Date());
-            storage.logHabitCompletion(habit.id, new Date());
-            const updated = storage.getHabits().find(h => h.id === habit.id);
-            expect(updated?.streak).toBe(0);
-        });
-
-        it('should set streak to 1 when targetGoal is fully met', () => {
-            const habit = storage.addHabit({ name: 'Drink Water', targetGoal: 3 });
-            storage.logHabitCompletion(habit.id, new Date());
-            storage.logHabitCompletion(habit.id, new Date());
-            storage.logHabitCompletion(habit.id, new Date());
-            const updated = storage.getHabits().find(h => h.id === habit.id);
-            expect(updated?.streak).toBe(1);
-        });
-
-        it('should count consecutive fully-completed days as streak', () => {
-            const habit = storage.addHabit({ name: 'Exercise' });
-            const day1 = new Date(2025, 0, 13);
-            const day2 = new Date(2025, 0, 14);
-            const day3 = new Date(2025, 0, 15);
-            storage.logHabitCompletion(habit.id, day1);
-            storage.logHabitCompletion(habit.id, day2);
-            storage.logHabitCompletion(habit.id, day3);
-            const updated = storage.getHabits().find(h => h.id === habit.id);
-            expect(updated?.streak).toBe(3);
-        });
-
-        it('should reset streak count when there is a gap between completed days', () => {
-            const habit = storage.addHabit({ name: 'Exercise' });
-            const day1 = new Date(2025, 0, 13);
-            const day3 = new Date(2025, 0, 15);
-            storage.logHabitCompletion(habit.id, day1);
-            storage.logHabitCompletion(habit.id, day3);
-            const updated = storage.getHabits().find(h => h.id === habit.id);
-            expect(updated?.streak).toBe(1);
-        });
-
-        it('should extend streak when retroactively completing a missed day', () => {
-            const habit = storage.addHabit({ name: 'Exercise' });
-            const day1 = new Date(2025, 0, 13);
-            const day2 = new Date(2025, 0, 14);
-            const day3 = new Date(2025, 0, 15);
-            storage.logHabitCompletion(habit.id, day1);
-            storage.logHabitCompletion(habit.id, day3);
-            // Streak is 1 (gap at day2)
-            storage.logHabitCompletion(habit.id, day2);
-            // Now day1, day2, day3 are all complete → streak = 3
-            const updated = storage.getHabits().find(h => h.id === habit.id);
-            expect(updated?.streak).toBe(3);
-        });
-
-        it('should count habit completions for today', () => {
-            const habit = storage.addHabit({ name: 'Push-ups', targetGoal: 3 });
-            storage.logHabitCompletion(habit.id, new Date());
-            storage.logHabitCompletion(habit.id, new Date());
-            expect(storage.countHabitCompletionsToday(habit.id)).toBe(2);
-        });
-
-        it('should check if habit is completed today', () => {
-            const habit = storage.addHabit({ name: 'Meditate' });
-            expect(storage.isHabitCompletedToday(habit.id)).toBe(false);
-            storage.logHabitCompletion(habit.id, new Date());
-            expect(storage.isHabitCompletedToday(habit.id)).toBe(true);
-        });
-
-        it('should count habit completions for a specific date', () => {
-            const habit = storage.addHabit({ name: 'Exercise' });
-            const date = new Date(2025, 0, 15);
-            storage.logHabitCompletion(habit.id, date);
-            storage.logHabitCompletion(habit.id, date);
-            expect(storage.countHabitCompletionsForDate(habit.id, '2025-01-15')).toBe(2);
-            expect(storage.countHabitCompletionsForDate(habit.id, '2025-01-16')).toBe(0);
-        });
-
-        it('should calculate streak correctly using calculateHabitStreak', () => {
-            const habit = storage.addHabit({ name: 'Drink Water', targetGoal: 2 });
-            const day1 = new Date(2025, 0, 13);
-            const day2 = new Date(2025, 0, 14);
-            storage.logHabitCompletion(habit.id, day1);
-            storage.logHabitCompletion(habit.id, day1);
-            storage.logHabitCompletion(habit.id, day2);
-            storage.logHabitCompletion(habit.id, day2);
-            const data = storage.getData();
-            const streak = storage.calculateHabitStreak(habit.id, habit.targetGoal, data.dailyHabitLogs);
-            expect(streak).toBe(2);
-        });
-    });
-
-    // ========================
     // Finance Management
     // ========================
     describe('expense management', () => {
@@ -309,27 +178,6 @@ describe('StorageManager', () => {
     });
 
     // ========================
-    // Leveling & Streak
-    // ========================
-    describe('leveling and streak', () => {
-        it('should calculate level based on completed tasks', () => {
-            // Default: 30 tasks per level
-            for (let i = 0; i < 31; i++) {
-                const task = storage.addTask({ title: `Task ${i}` });
-                storage.updateTask(task.id, { completed: true });
-            }
-            storage.updateLevel();
-            const data = storage.getData();
-            expect(data.userStats.level).toBe(2); // 31 / 30 = 1.03, floor + 1 = 2
-        });
-
-        it('should update daily streak', () => {
-            storage.updateDailyStreak(true);
-            expect(storage.getUserStats().dailyStreak).toBe(1);
-        });
-    });
-
-    // ========================
     // Categories
     // ========================
     describe('category management', () => {
@@ -356,12 +204,12 @@ describe('StorageManager', () => {
         });
 
         it('should update a category and propagate to items', () => {
-            storage.addHabit({ name: 'Test', category: 'Work' });
+            storage.addExpense({ description: 'Test', amount: 10, category: 'Work' });
             const result = storage.updateCategory('Work', 'Career');
             expect(result).toBe(true);
             expect(storage.getCategories()).toContain('Career');
             expect(storage.getCategories()).not.toContain('Work');
-            expect(storage.getHabits()[0].category).toBe('Career');
+            expect(storage.getExpenses()[0].category).toBe('Career');
         });
 
         it('should not update to an existing category name', () => {
@@ -370,26 +218,11 @@ describe('StorageManager', () => {
         });
 
         it('should delete a category and clear from items', () => {
-            storage.addHabit({ name: 'Test', category: 'Work' });
+            storage.addExpense({ description: 'Test', amount: 10, category: 'Work' });
             const result = storage.deleteCategory('Work');
             expect(result).toBe(true);
             expect(storage.getCategories()).not.toContain('Work');
-            expect(storage.getHabits()[0].category).toBeNull();
-        });
-    });
-
-    // ========================
-    // Settings
-    // ========================
-    describe('settings management', () => {
-        it('should return default settings', () => {
-            const settings = storage.getSettings();
-            expect(settings.tasksPerLevel).toBe(30);
-        });
-
-        it('should update settings', () => {
-            storage.updateSettings({ tasksPerLevel: 50 });
-            expect(storage.getSettings().tasksPerLevel).toBe(50);
+            expect(storage.getExpenses()[0].category).toBeNull();
         });
     });
 
@@ -501,21 +334,18 @@ describe('StorageManager', () => {
             expect(data.version).toBe('1.0.0');
             expect(data.tasks).toHaveLength(1);
             expect(Array.isArray(data.projects)).toBe(true);
-            expect(Array.isArray(data.habits)).toBe(true);
-            expect(data.settings.tasksPerLevel).toBe(30);
         });
 
         it('should migrate old per-type category structure to flat array', () => {
             const partial = {
                 tasks: [],
                 projects: [],
-                categories: { tasks: ['Work', 'Personal'], habits: ['Fitness'], finance: ['Income'] }
+                categories: { tasks: ['Work', 'Personal'], finance: ['Income'] }
             };
             const result = storage.migrateAndImport(partial as any);
             expect(result).toBe(true);
             const categories = storage.getCategories();
             expect(categories).toContain('Work');
-            expect(categories).toContain('Fitness');
             expect(categories).toContain('Income');
         });
 
