@@ -190,41 +190,6 @@ test.describe('Task Manager App', () => {
     });
 
     // ========================
-    // Date Navigation
-    // ========================
-    test.describe('date navigation', () => {
-        test('should show today by default', async ({ page }) => {
-            await expect(page.locator('#selectedDateDisplay')).toContainText('Today');
-        });
-
-        test('should navigate to previous day', async ({ page }) => {
-            await page.click('#prevDayBtn');
-            await expect(page.locator('#selectedDateDisplay')).not.toContainText('Today');
-            await expect(page.locator('#goTodayBtn')).toBeVisible();
-        });
-
-        test('should return to today via button', async ({ page }) => {
-            await page.click('#prevDayBtn');
-            await page.click('#goTodayBtn');
-            await expect(page.locator('#selectedDateDisplay')).toContainText('Today');
-        });
-
-        test('should reload active tab data when returning to today', async ({ page }) => {
-            // Switch to tasks tab
-            await page.click('[data-tab="tasks"]');
-            await expect(page.locator('#tasks-tab')).toBeVisible();
-            // Navigate to previous day
-            await page.click('#prevDayBtn');
-            await expect(page.locator('#selectedDateDisplay')).not.toContainText('Today');
-            // Return to today via button
-            await page.click('#goTodayBtn');
-            // The tasks tab should still be active and showing today's data
-            await expect(page.locator('#selectedDateDisplay')).toContainText('Today');
-            await expect(page.locator('#tasks-tab')).toBeVisible();
-        });
-    });
-
-    // ========================
     // Dashboard Overdue Tasks
     // ========================
     test.describe('dashboard overdue tasks', () => {

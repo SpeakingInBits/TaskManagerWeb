@@ -28,7 +28,6 @@ class TaskManager {
     currentEditingShoppingItemId: string | null = null;
     dragSrcWishId: string | null = null;
     expandedWishLists: Set<string> = new Set();
-    selectedDate: Date = new Date();
     tasksExpanded: boolean = false;
     hideCompleted: boolean = false;
 
@@ -39,7 +38,6 @@ class TaskManager {
     init(): void {
         this.setupEventListeners();
         this.initializeFinanceDateFilter();
-        this.updateDateNavigator();
         this.loadFilterSettings();
         this.render();
         this.processRecurringTasks();
@@ -184,19 +182,6 @@ class TaskManager {
             this.switchTab('tasks');
         });
 
-        // Date navigator
-        document.getElementById('prevDayBtn')!.addEventListener('click', () => this.navigateDate(-1));
-        document.getElementById('nextDayBtn')!.addEventListener('click', () => this.navigateDate(1));
-        document.getElementById('goTodayBtn')!.addEventListener('click', () => {
-            this.selectedDate = new Date();
-            this.updateDateNavigator();
-            const activeTabName = (document.querySelector('.nav-tab.active') as HTMLElement | null)?.dataset.tab;
-            if (activeTabName) {
-                this.switchTab(activeTabName);
-            } else {
-                this.renderDashboard();
-            }
-        });
     }
 
     // ========================
@@ -254,7 +239,7 @@ class TaskManager {
     // Dashboard Rendering
     // ========================
     renderDashboard(): void {
-        const today = this.getSelectedDateStr();
+        const today = storage.formatDate(new Date());
         const tasks = storage.getTasks();
 
         // Selected day's overview
@@ -392,7 +377,7 @@ class TaskManager {
         const tasks = storage.getTasks();
         const statusFilter = (document.getElementById('statusFilter') as HTMLSelectElement).value;
         const searchTerm = (document.getElementById('searchTasks') as HTMLInputElement).value.toLowerCase();
-        const today = this.getSelectedDateStr();
+        const today = storage.formatDate(new Date());
         const filtersActive = statusFilter || searchTerm;
 
         let filtered = tasks.filter(task => {
@@ -677,7 +662,7 @@ class TaskManager {
         if (task) {
             task.completed = !task.completed;
             if (task.completed) {
-                task.completedDate = this.getSelectedDateStr();
+                task.completedDate = storage.formatDate(new Date());
                 // If repeatable, immediately create next task with recalculated due date
                 if (task.repeatType !== 'none') {
                     this.createNextRecurringTask(task);
@@ -2193,70 +2178,9 @@ class TaskManager {
         const lastUpdated = storage.getData().lastUpdated;
         document.getElementById('lastUpdated')!.textContent = lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Never';
 
-        this.updateDateNavigator();
         this.renderDashboard();
     }
 
-    // ========================
-    // Date Navigation
-    // ========================
-    getSelectedDateStr(): string {
-        return storage.formatDate(this.selectedDate);
-    }
-
-    isSelectedDateToday(): boolean {
-        return this.getSelectedDateStr() === storage.formatDate(new Date());
-    }
-
-    navigateDate(delta: number): void {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const minDate = new Date(today);
-        minDate.setDate(minDate.getDate() - 6);
-
-        const newDate = new Date(this.selectedDate);
-        newDate.setDate(newDate.getDate() + delta);
-        newDate.setHours(0, 0, 0, 0);
-
-        if (newDate >= minDate && newDate <= today) {
-            this.selectedDate = newDate;
-            this.updateDateNavigator();
-            const activeTab = document.querySelector('.nav-tab.active') as HTMLElement | null;
-            if (activeTab) {
-                this.switchTab(activeTab.dataset.tab!);
-            } else {
-                this.renderDashboard();
-            }
-        }
-    }
-
-    formatDisplayDate(date: Date): string {
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
-    }
-
-    updateDateNavigator(): void {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const minDate = new Date(today);
-        minDate.setDate(minDate.getDate() - 6);
-
-        const sel = new Date(this.selectedDate);
-        sel.setHours(0, 0, 0, 0);
-
-        const isToday = sel.getTime() === today.getTime();
-        const isPastLimit = sel.getTime() <= minDate.getTime();
-
-        const displayStr = isToday
-            ? `Today — ${this.formatDisplayDate(this.selectedDate)}`
-            : this.formatDisplayDate(this.selectedDate);
-
-        document.getElementById('selectedDateDisplay')!.textContent = displayStr;
-        (document.getElementById('prevDayBtn') as HTMLButtonElement).disabled = isPastLimit;
-        (document.getElementById('nextDayBtn') as HTMLButtonElement).disabled = isToday;
-        (document.getElementById('goTodayBtn') as HTMLElement).style.display = isToday ? 'none' : 'inline-block';
-    }
 }
 
 // Initialize the app when DOM is ready
